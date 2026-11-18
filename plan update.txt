@@ -1,0 +1,746 @@
+# **Đề xuất kiến trúc và lộ trình phát triển TribalIslandBot**
+
+Với ba lựa chọn **Hybrid AI – Bộ nhớ dài hạn – Ưu tiên cân bằng**, tôi đề xuất phát triển TribalIslandBot theo hướng:
+
+**Autonomous Hybrid Agent with Persistent Experience Memory** — Bot tự quan sát trạng thái game, phân tích tình huống, lựa chọn hành động, ghi nhớ kết quả và cải thiện chiến thuật qua các lượt chơi.
+
+Điểm quan trọng: không nên xây dựng một mô hình AI quá phức tạp ngay từ đầu. Game có bản đồ và quái vật tương đối ổn định, vì vậy hướng hiệu quả nhất là kết hợp:
+
+- **Computer Vision:** nhận diện nhân vật, quái, vật cản, HP, tầng và trạng thái game.
+- **Rule-based AI:** xử lý các quyết định cần độ ổn định cao như hồi máu, né quái, chọn kỹ năng.
+- **Adaptive Decision:** điều chỉnh chiến thuật dựa trên tình huống và dữ liệu đã ghi nhận.
+- **Persistent Memory:** lưu kinh nghiệm qua nhiều lượt chơi, kể cả khi tắt bot và mở lại.
+
+Mục tiêu không phải làm bot có vẻ thông minh, mà là làm bot **hoàn thành nhiệm vụ ổn định hơn, ít chết ngoài dự kiến hơn và sử dụng tài nguyên hợp lý hơn**.
+
+## **1. Đánh giá nền tảng hiện tại**
+
+Tôi đối chiếu đề xuất với mã nguồn và roadmap trong file bạn cung cấp. Có một số thành phần có thể kế thừa, nhưng cần phân biệt rõ phần đã có với phần mới chỉ được lên kế hoạch.
+
+| Thành phần                 | Hiện trạng theo mã nguồn                                                     |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| Điều khiển chiến đấu       | Đã có CombatEngine, đánh thường, dùng skill và kiting                        |
+| Nhận diện giao diện        | Đã có VisionEngine: HP, OCR tầng, lên cấp, lobby, kết thúc trận              |
+| Điều phối lượt chơi        | Đã có RunManager và các trạng thái cơ bản                                    |
+| Line of Sight              | Có mã kiểm tra giao cắt đoạn thẳng với vật cản                               |
+| Nhận diện quái và nhân vật | Chưa có hệ thống tracking hoàn chỉnh được chứng minh trong luồng chính       |
+| Di chuyển thích ứng        | Mới có nền tảng thiết kế; chiến đấu hiện tại vẫn chủ yếu theo chu kỳ W-D-S-A |
+| Bộ nhớ dài hạn             | Chưa thấy cơ chế lưu và khai thác kinh nghiệm chiến đấu lâu dài              |
+| Học từ kết quả             | Chưa có cơ chế đánh giá và cập nhật chiến thuật qua nhiều lượt               |
+
+
+
+TRIBAL_ISLAND_BOT_FULL_CODE(1).txt
+
+TRIBAL_ISLAND_BOT_FULL_CODE(1).txt
+
+TRIBAL_ISLAND_BOT_FULL_CODE(1).txt
+
+TRIBAL_ISLAND_BOT_FULL_CODE(1).txt
+
+
+
+**Nhận xét quan trọng:** Không nên viết lại toàn bộ bot. Nên giữ các module đang hoạt động, tạo lớp kiến trúc mới bao quanh chúng rồi thay thế từng phần chiến đấu khi module mới đã vượt qua kiểm thử.
+
+Một điểm cần xử lý sớm là hiện tại có hai hướng điều khiển: `ADBController` dùng ADB và `CombatEngine` dùng `pydirectinput`. Nếu để cả hai cùng điều khiển game, việc đồng bộ thao tác, tọa độ và trạng thái sẽ khó kiểm soát. Cần thống nhất một giao diện điều khiển duy nhất.
+
+## **2. Kiến trúc tổng thể đề xuất**
+
+## **TribalIslandBot – Hybrid AI Architecture**
+
+**Game Environment – BlueStacks**
+
+Ảnh màn hình · HP · Quái · Vật cản · Tầng · Trạng thái
+
+**1. Perception Engine**
+
+Computer Vision · Object Detection · Tracking · UI Recognition
+
+Nâng cấp từ VisionEngine
+
+**2. World Model**
+
+Vị trí · Bản đồ · Quái · Vật cản · Mối đe dọa · Độ tin cậy
+
+Thành phần mới
+
+**3. Hybrid Decision Engine**
+
+**Rule-based**
+
+Hồi máu, né nguy hiểm, xử lý trạng thái
+
+**Adaptive AI**
+
+Chọn hướng, chiến thuật, điều chỉnh trọng số
+
+Kết hợp quyết định theo mức độ nguy hiểm, hiệu quả và kinh nghiệm cũ
+
+**4. Action Engine**
+
+Movement · Attack · Skill · Heal · Perk · Transition
+
+Một giao diện điều khiển thống nhất
+
+**5. Persistent Memory Engine**
+
+Lưu trận đấu · Thống kê · Kinh nghiệm · Đánh giá chiến thuật
+
+Bộ nhớ dài hạn
+
+Phản hồi kết quả về World Model và Decision Engine
+
+Kiến trúc này chia bot thành các trách nhiệm độc lập. Ví dụ, khi nhận diện quái không chắc chắn, Decision Engine có thể giảm mức độ tin cậy và chuyển sang chiến thuật an toàn, thay vì sử dụng một vị trí quái sai để điều khiển nhân vật.
+
+### **Vai trò từng lớp**
+
+| Lớp         | Trách nhiệm                                              |
+| ----------- | -------------------------------------------------------- |
+| Perception  | Hiểu những gì đang xuất hiện trên màn hình               |
+| World Model | Xây dựng trạng thái thế giới game tại thời điểm hiện tại |
+| Decision    | Chọn hành động phù hợp                                   |
+| Action      | Thực thi hành động trong game                            |
+| Memory      | Ghi nhận kết quả và kinh nghiệm để sử dụng về sau        |
+| Run Manager | Điều phối toàn bộ vòng đời của lượt chơi                 |
+
+## **3. Thiết kế chi tiết từng module**
+
+### **3.1. Perception Engine – Bộ phận quan sát**
+
+Đây là nền tảng quan trọng nhất. Bot không thể ra quyết định thông minh nếu không biết chính xác những gì đang xảy ra.
+
+Hiện tại `VisionEngine` đã có các chức năng như đọc HP bằng HSV, đọc tầng bằng OCR, nhận diện màn hình lên cấp, lobby và kết thúc trận. Nên giữ lại các chức năng này, sau đó mở rộng theo từng đối tượng.&#x20;
+
+TRIBAL_ISLAND_BOT_FULL_CODE(1).txt
+
+
+
+Cấu trúc đề xuất:
+
+```
+core/
+└── perception/
+    ├── perception_engine.py
+    ├── player_detector.py
+    ├── enemy_detector.py
+    ├── obstacle_detector.py
+    ├── portal_detector.py
+    ├── ui_detector.py
+    ├── entity_tracker.py
+    └── confidence_manager.py
+```
+
+Các đối tượng cần nhận diện:
+
+| Đối tượng  | Dữ liệu cần lấy                           | Mức độ     |
+| ---------- | ----------------------------------------- | ---------- |
+| Player     | Tọa độ trung tâm, HP, trạng thái          | Rất cao    |
+| Enemy      | Tọa độ, loại quái, khoảng cách, HP nếu có | Rất cao    |
+| Obstacle   | Tọa độ, bán kính, loại vật cản            | Cao        |
+| Portal     | Tọa độ, trạng thái xuất hiện              | Cao        |
+| UI         | Tầng, lên cấp, lobby, kết thúc trận       | Rất cao    |
+| Skill/Perk | Các lựa chọn đang hiển thị                | Trung bình |
+
+**Không nên đưa AI nhận diện vật thể bằng Deep Learning vào ngay.**
+
+Với môi trường game có hình ảnh tương đối ổn định, nên thử theo thứ tự:
+
+1. Template Matching.
+2. HSV Color Segmentation.
+3. Contour Detection.
+4. Object Tracking giữa các frame.
+5. Chỉ dùng YOLO hoặc mô hình học máy nếu các cách trên không đủ chính xác.
+
+Một nguyên tắc quan trọng: mọi kết quả nhận diện phải có `confidence`, tức độ tin cậy.
+
+Ví dụ:
+
+```
+Detection(    category="enemy",    center_x=850,    center_y=420,    confidence=0.92)
+```
+
+Không nên để một kết quả nhận diện có độ tin cậy thấp trực tiếp điều khiển hành động nguy hiểm.
+
+### **3.2. World Model – Mô hình trạng thái thế giới**
+
+Đây là phần mới mà tôi khuyến nghị ưu tiên xây dựng sau Perception.
+
+Thay vì để các module tự phân tích ảnh và đưa ra quyết định riêng, World Model tổng hợp tất cả thông tin thành một trạng thái thống nhất.
+
+Ví dụ:
+
+```
+WorldState(    player=PlayerState(        x=500,        y=450,        hp_percent=65    ),    enemies=[...],    obstacles=[...],    portal=None,    current_floor=25,    game_state="FIGHTING",    confidence=0.94)
+```
+
+World Model cần quản lý:
+
+- Vị trí hiện tại của người chơi.
+- Vị trí và khoảng cách đến quái.
+- Mức độ nguy hiểm từ từng hướng.
+- Những vật cản đang che đường di chuyển hoặc đường bắn.
+- Những vị trí đã đi qua.
+- Trạng thái hiện tại của game.
+- Độ tin cậy của toàn bộ dữ liệu.
+
+**Tại sao cần World Model?**
+
+Ví dụ, Perception phát hiện ba con quái. Decision Engine không nên chỉ nhận một danh sách ba tọa độ. Nó cần biết con nào gần nhất, con nào đang áp sát, hướng nào có thể di chuyển và hướng nào bị vật cản.
+
+World Model là nơi chuyển dữ liệu hình ảnh thành thông tin có ý nghĩa đối với chiến thuật.
+
+### **3.3. Hybrid Decision Engine – Bộ não ra quyết định**
+
+Đây là thành phần quyết định bot có thực sự thông minh hơn hay không.
+
+Tôi đề xuất chia thành ba cấp quyết định.
+
+**Cấp 1 – Safety Rules**
+
+Ưu tiên cao nhất
+
+- HP xuống thấp: cân nhắc hồi máu.
+- Quái áp sát: ưu tiên thoát khỏi vùng nguy hiểm.
+- Nhận diện không chắc chắn: giảm tốc độ hoặc sử dụng chiến thuật dự phòng.
+- Kẹt địa hình: kích hoạt Stuck Recovery.
+
+  **Cấp 2 – Tactical Decision**
+- Chọn hướng di chuyển.
+- Tìm đường tránh vật cản.
+- Giữ khoảng cách với quái.
+- Tìm góc bắn có Line of Sight.
+- Chọn thời điểm sử dụng skill.
+
+  **Cấp 3 – Adaptive Strategy**
+- So sánh hiệu quả các chiến thuật.
+- Ghi nhận chiến thuật nào thường gây mất HP.
+- Điều chỉnh trọng số di chuyển.
+- Sử dụng kinh nghiệm của những tầng tương tự.
+
+**Thuật toán lựa chọn hành động**
+
+Không cần dùng Neural Network để làm việc này ở giai đoạn đầu. Có thể sử dụng hàm chấm điểm hành động:
+
+\\[ Score(a)=w_sS(a)+w_dD(a)+w_lL(a)+w_mM(a) \\]
+
+Trong đó:
+
+- \\(S(a)\\): mức độ an toàn của hành động.
+- \\(D(a)\\): khả năng duy trì khoảng cách phù hợp với quái.
+- \\(L(a)\\): chất lượng đường bắn.
+- \\(M(a)\\): mức độ phù hợp với kinh nghiệm đã lưu.
+- \\(w_s,w_d,w_l,w_m\\): trọng số có thể điều chỉnh.
+
+Bot chọn hành động có điểm số tốt nhất, nhưng Safety Rules vẫn có quyền ưu tiên cao hơn khi phát hiện nguy hiểm nghiêm trọng.
+
+Ví dụ:
+
+| Hành động      | An toàn | Đường bắn | Hiệu quả tổng thể |
+| -------------- | ------- | --------- | ----------------- |
+| Di chuyển lên  | 40      | 90        | 55                |
+| Di chuyển trái | 85      | 65        | 80                |
+| Di chuyển phải | 55      | 95        | 70                |
+| Đứng yên       | 20      | 100       | 40                |
+
+Bot sẽ ưu tiên di chuyển trái trong tình huống này.
+
+Đây là mô hình quyết định có thể giải thích được. Khi bot chọn sai, bạn có thể xem từng điểm số để tìm nguyên nhân.
+
+### **3.4. Action Engine – Bộ phận thực thi**
+
+Nên thống nhất một interface để mọi module ra lệnh thông qua cùng một nơi.
+
+```
+core/
+└── action/
+    ├── action_engine.py
+    ├── movement_controller.py
+    ├── combat_controller.py
+    ├── skill_controller.py
+    └── game_controller.py
+```
+
+Interface đề xuất:
+
+```
+class ActionEngine:    def move(self, angle, duration_ms):        pass    def attack(self):        pass    def use_skill(self):        pass    def heal(self):        pass    def select_perk(self, index):        pass    def stop_all(self):        pass
+```
+
+Đây là interface minh họa, không phải mã đã được kiểm thử.
+
+Với môi trường BlueStacks hiện tại, cần chọn một phương thức điều khiển chính. Tôi nghiêng về ADB nếu kiểm thử xác nhận thao tác joystick, chạm nút và độ trễ đáp ứng yêu cầu. Nếu ADB không đáp ứng được một số thao tác, có thể giữ adapter khác nhưng phải đi qua cùng interface.
+
+Không nên để `RunManager`, `CombatEngine` và Perception tự gọi các thư viện điều khiển khác nhau.
+
+## **4. Thiết kế bộ nhớ dài hạn**
+
+Đây là phần khác biệt quan trọng nhất giữa một bot tự động thông thường và một bot có khả năng tích lũy kinh nghiệm.
+
+Tôi đề xuất chia Memory thành ba tầng.
+
+**1. Working Memory – Bộ nhớ phiên hiện tại**
+
+Trong lúc chạy
+
+- HP hiện tại.
+- Tọa độ người chơi.
+- Vị trí quái.
+- Hướng di chuyển gần nhất.
+- Số lần bị kẹt.
+- Trạng thái tầng và trận.
+
+  Dữ liệu ngắn hạn, có thể mất khi kết thúc phiên.
+
+**2. Episodic Memory – Bộ nhớ trải nghiệm**
+
+Lưu lâu dài
+
+- Kết quả mỗi lượt chơi.
+- Tầng bắt đầu mất nhiều HP.
+- Tình huống chết hoặc thất bại.
+- Chiến thuật đã sử dụng.
+- Các lần bị kẹt.
+- Thời gian hoàn thành.
+
+  Lưu lại những sự kiện quan trọng để phân tích sau này.
+
+**3. Semantic Memory – Bộ nhớ kiến thức**
+
+Kinh nghiệm đã tổng hợp
+
+- Bản đồ và đặc điểm từng tầng.
+- Những vị trí thường có vật cản.
+- Chiến thuật hiệu quả theo tình huống.
+- Tỷ lệ thành công của từng kiểu di chuyển.
+- Cấu hình chiến thuật tốt nhất đã tìm được.
+
+  Lưu kiến thức đã được tổng hợp từ nhiều lượt chơi.
+
+### **4.1. Công nghệ lưu trữ**
+
+Tôi khuyến nghị sử dụng **SQLite**.
+
+Lý do:
+
+- Không cần cài đặt database server.
+- Phù hợp với ứng dụng Python chạy trên Windows.
+- Có thể lưu hàng nghìn đến hàng triệu bản ghi tùy thiết kế và dung lượng.
+- Dễ truy vấn lịch sử và thống kê.
+- Có thể backup thành một file database.
+
+Cấu trúc thư mục:
+
+```
+data/
+├── tribal_memory.db
+├── backups/
+└── exports/
+
+core/
+└── memory/
+    ├── memory_manager.py
+    ├── episode_repository.py
+    ├── strategy_repository.py
+    ├── map_repository.py
+    ├── memory_analyzer.py
+    └── strategy_updater.py
+```
+
+### **4.2. Thiết kế database**
+
+Tôi đề xuất các bảng sau:
+
+| Bảng                 | Nội dung                           |
+| -------------------- | ---------------------------------- |
+| `runs`               | Thông tin tổng thể mỗi lượt chơi   |
+| `floor_records`      | Kết quả tại từng tầng              |
+| `battle_events`      | Sự kiện quan trọng trong chiến đấu |
+| `strategy_history`   | Chiến thuật đã áp dụng             |
+| `strategy_stats`     | Thống kê hiệu quả chiến thuật      |
+| `map_profiles`       | Đặc điểm bản đồ đã ghi nhận        |
+| `bot_config_history` | Lịch sử thay đổi cấu hình          |
+
+Ví dụ một bản ghi chiến thuật:
+
+```
+{
+  "strategy": "adaptive_kiting",
+  "floor": 25,
+  "hp_start": 100,
+  "hp_end": 78,
+  "duration_seconds": 42,
+  "stuck_count": 0,
+  "result": "success"
+}
+```
+
+Dữ liệu này cho phép bot đánh giá chiến thuật thay vì chỉ ghi lại rằng nó đã di chuyển trái hay phải.
+
+### **4.3. Cơ chế học từ kinh nghiệm**
+
+Đề xuất sử dụng **Online Strategy Evaluation** – đánh giá chiến thuật liên tục.
+
+Ví dụ bot có ba chiến thuật:
+
+- `circular_kiting`: chạy vòng tròn.
+- `adaptive_kiting`: thay đổi hướng theo vị trí quái.
+- `safe_distance`: ưu tiên giữ khoảng cách an toàn.
+
+Mỗi chiến thuật có thống kê riêng:
+
+| Chiến thuật   | Tỷ lệ hoàn thành | HP trung bình còn lại | Thời gian |
+| ------------- | ---------------- | --------------------- | --------- |
+| Circular      | 82%              | 48%                   | 55 giây   |
+| Adaptive      | 91%              | 64%                   | 49 giây   |
+| Safe Distance | 88%              | 76%                   | 67 giây   |
+
+*Đây là số liệu giả định để minh họa cách đánh giá, không phải kết quả thực nghiệm của bot.*
+
+Vì bạn chọn ưu tiên cân bằng, không nên chỉ tối ưu tốc độ hoặc tỷ lệ sống sót.
+
+Có thể dùng hàm đánh giá:
+
+\\[ U = 0.4C + 0.3S + 0.2E + 0.1T \\]
+
+Trong đó:
+
+- \\(C\\): tỷ lệ hoàn thành.
+- \\(S\\): khả năng sống sót hoặc HP còn lại.
+- \\(E\\): hiệu quả sử dụng tài nguyên.
+- \\(T\\): hiệu quả thời gian.
+
+Các thành phần phải được chuẩn hóa về cùng thang điểm trước khi tính. Trọng số trên là cấu hình khởi đầu để thử nghiệm, không phải giá trị cố định.
+
+**Cách học:** Sau mỗi lượt, bot cập nhật thống kê chiến thuật. Ở lượt sau, nó ưu tiên chiến thuật có hiệu quả tốt trong tình huống tương tự, nhưng vẫn thử nghiệm có kiểm soát để tránh bị mắc kẹt trong một chiến thuật duy nhất.
+
+### **4.4. Nguyên tắc bảo vệ bộ nhớ**
+
+Không cho bot tự sửa code hoặc tự thay đổi cấu hình quan trọng sau mỗi lượt.
+
+Thay vào đó:
+
+1. Ghi nhận kết quả.
+2. Tính toán chiến thuật tốt hơn.
+3. Lưu cấu hình ứng viên.
+4. Chạy thử ở chế độ kiểm thử.
+5. Chỉ áp dụng khi đạt tiêu chí.
+6. Giữ cấu hình cũ để rollback.
+
+Như vậy, bot có thể học mà không làm hỏng chính nó.
+
+## **5. Lộ trình triển khai chi tiết**
+
+Tôi đề xuất triển khai thành 8 giai đoạn. Giữ tinh thần roadmap P1–P8 hiện có, nhưng bổ sung World Model, Memory và Adaptive Learning để phù hợp với định hướng mới.
+
+## **Roadmap phát triển**
+
+1. **P1 – Chuẩn hóa nền tảng điều khiển**
+
+   Ưu tiên bắt đầu
+   - Thống nhất ADB và `pydirectinput` qua Action Engine.
+   - Chuẩn hóa tọa độ và thời gian thao tác.
+   - Bổ sung cơ chế stop, pause, resume an toàn.
+   - Tách luồng capture, perception và action.
+
+   **Nghiệm thu:** Bot điều khiển ổn định, không bị hai module thao tác chồng chéo.
+2. **P2 – Hoàn thiện Perception Engine**
+   - Nhận diện Player.
+   - Nhận diện Enemy.
+   - Nhận diện Obstacle.
+   - Nhận diện Portal.
+   - Thêm confidence score.
+   - Xây dựng bộ dữ liệu ảnh kiểm thử.
+
+   **Nghiệm thu:** Nhận diện đúng đối tượng trong các tình huống mẫu, không nhầm UI với vật thể game.
+3. **P3 – Xây dựng World Model**
+   - Chuẩn hóa Entity và PerceptionResult.
+   - Theo dõi vị trí giữa các frame.
+   - Xây dựng bản đồ Cost Grid.
+   - Tính khoảng cách và vùng nguy hiểm.
+   - Tích hợp Line of Sight.
+
+   **Nghiệm thu:** Bot có thể biểu diễn trạng thái phòng chơi thành dữ liệu thống nhất.
+4. **P4 – Adaptive Navigation**
+   - Tích hợp Stuck Detector.
+   - Xây dựng Recovery System.
+   - Tính vector di chuyển.
+   - Né vật cản.
+   - Ưu tiên thoát khỏi quái áp sát.
+   - Dùng kiting cũ làm fallback.
+
+   **Nghiệm thu:** Bot có thể di chuyển theo tình huống thay vì chỉ chạy chu kỳ W-D-S-A.
+5. **P5 – Hybrid Combat Decision**
+   - Tích hợp Safety Rules.
+   - Chọn hướng chiến đấu theo tình huống.
+   - Đánh giá chất lượng đường bắn.
+   - Điều chỉnh skill và hồi máu.
+   - Giữ nguyên nguyên tắc chiến đấu `sequence` đã chọn.
+   - Giữ điều kiện kết thúc `fixed`, lựa chọn kỹ năng `auto`.
+
+   **Nghiệm thu:** Bot chiến đấu theo thông tin quan sát được, không phụ thuộc hoàn toàn vào chu kỳ cố định.
+6. **P6 – Persistent Memory**
+   - Tạo SQLite database.
+   - Lưu từng lượt chơi.
+   - Lưu kết quả từng tầng.
+   - Lưu sự kiện mất HP, bị kẹt, thất bại.
+   - Lưu hiệu quả từng chiến thuật.
+   - Khôi phục kinh nghiệm sau khi khởi động lại.
+
+   **Nghiệm thu:** Tắt bot, mở lại, dữ liệu kinh nghiệm vẫn còn nguyên.
+7. **P7 – Adaptive Learning**
+   - Tổng hợp kinh nghiệm.
+   - Đánh giá hiệu quả chiến thuật.
+   - So sánh những lượt chơi tương tự.
+   - Cập nhật trọng số quyết định.
+   - Thử nghiệm chiến thuật mới có kiểm soát.
+   - Hỗ trợ rollback cấu hình.
+
+   **Nghiệm thu:** Có bằng chứng định lượng cho thấy bot điều chỉnh chiến thuật dựa trên dữ liệu lịch sử.
+8. **P8 – Full System Integration**
+   - Tích hợp toàn bộ module vào RunManager.
+   - Hoàn thiện chuyển tầng và nhận rương.
+   - Chạy liên tục nhiều lượt.
+   - Kiểm thử tình huống lỗi.
+   - Hoàn thiện log, GUI và báo cáo thống kê.
+
+   **Nghiệm thu:** Bot có thể vận hành tự động, ghi nhớ kinh nghiệm và duy trì hoạt động ổn định trong các bài kiểm thử dài.
+
+### **Thứ tự triển khai thực tế**
+
+Tôi khuyến nghị không làm song song tất cả module. Thứ tự phụ thuộc nên là:
+
+```
+P1: Action Engine
+       |
+P2: Perception Engine
+       |
+P3: World Model
+       |
+P4: Adaptive Navigation
+       |
+P5: Hybrid Combat
+       |
+P6: Persistent Memory
+       |
+P7: Adaptive Learning
+       |
+P8: Integration & Validation
+```
+
+Lưu ý: có thể bắt đầu thiết kế database và schema Memory trong P1–P3, nhưng chỉ nên đưa dữ liệu chiến đấu thật vào sau khi Perception và World Model đủ ổn định.
+
+## **6. Thiết kế cấu trúc source code mục tiêu**
+
+Tôi đề xuất tổ chức lại theo hướng sau:
+
+```
+TribalIslandBot/
+│
+├── app.py
+├── config/
+│   ├── settings.json
+│   ├── key_mapping.json
+│   ├── ai_config.json
+│   └── memory_config.json
+│
+├── core/
+│   ├── manager_run.py
+│   ├── engine_vision.py
+│   ├── engine_combat.py
+│   │
+│   ├── perception/
+│   │   ├── perception_engine.py
+│   │   ├── player_detector.py
+│   │   ├── enemy_detector.py
+│   │   ├── obstacle_detector.py
+│   │   ├── portal_detector.py
+│   │   ├── entity_tracker.py
+│   │   └── confidence_manager.py
+│   │
+│   ├── world/
+│   │   ├── world_model.py
+│   │   ├── entity.py
+│   │   ├── cost_map.py
+│   │   ├── threat_analyzer.py
+│   │   └── map_manager.py
+│   │
+│   ├── decision/
+│   │   ├── decision_engine.py
+│   │   ├── safety_rules.py
+│   │   ├── combat_strategy.py
+│   │   ├── movement_planner.py
+│   │   ├── skill_selector.py
+│   │   └── strategy_evaluator.py
+│   │
+│   ├── navigation/
+│   │   ├── line_of_sight.py
+│   │   ├── vector_steering.py
+│   │   ├── stuck_detector.py
+│   │   └── recovery_manager.py
+│   │
+│   ├── action/
+│   │   ├── action_engine.py
+│   │   ├── adb_adapter.py
+│   │   └── input_adapter.py
+│   │
+│   └── memory/
+│       ├── memory_manager.py
+│       ├── database.py
+│       ├── episode_repository.py
+│       ├── strategy_repository.py
+│       ├── memory_analyzer.py
+│       └── strategy_updater.py
+│
+├── data/
+│   ├── tribal_memory.db
+│   ├── backups/
+│   └── exports/
+│
+├── assets/
+│   ├── templates/
+│   ├── enemies/
+│   ├── obstacles/
+│   └── debug/
+│
+├── tests/
+│   ├── test_perception.py
+│   ├── test_world_model.py
+│   ├── test_navigation.py
+│   ├── test_decision.py
+│   ├── test_memory.py
+│   └── test_integration.py
+│
+└── logs/
+    ├── runtime/
+    ├── combat/
+    └── learning/
+```
+
+Đây là cấu trúc mục tiêu, không phải yêu cầu tạo toàn bộ thư mục ngay lập tức. Những file hiện tại nên được giữ và chuyển đổi từng bước, tránh phá vỡ các chức năng đang chạy ổn định.
+
+## **7. Tiêu chí đánh giá bot sau nâng cấp**
+
+Muốn biết Hybrid AI có thực sự tốt hơn hay không, phải có dữ liệu so sánh trước và sau nâng cấp.
+
+Tôi đề xuất các chỉ số sau:
+
+| Chỉ số                | Ý nghĩa                          |
+| --------------------- | -------------------------------- |
+| Run Completion Rate   | Tỷ lệ hoàn thành lượt chơi       |
+| Survival Rate         | Khả năng sống sót                |
+| Average HP Remaining  | HP trung bình còn lại            |
+| Average Run Duration  | Thời gian trung bình             |
+| Stuck Frequency       | Số lần bị kẹt                    |
+| Recovery Success Rate | Tỷ lệ thoát kẹt thành công       |
+| Detection Accuracy    | Độ chính xác nhận diện           |
+| False Action Rate     | Tỷ lệ hành động sai              |
+| Resource Efficiency   | Hiệu quả sử dụng đùi gà và skill |
+| Learning Improvement  | Mức cải thiện qua các lượt       |
+
+### **Bộ tiêu chí nghiệm thu đề xuất**
+
+Các con số dưới đây là mục tiêu kỹ thuật để kiểm thử, không phải hiệu năng hiện tại:
+
+| Chỉ tiêu                | Mục tiêu ban đầu                     |
+| ----------------------- | ------------------------------------ |
+| Nhận diện UI quan trọng | ≥ 98% trên bộ ảnh kiểm thử           |
+| Nhận diện Player        | ≥ 95% trên bộ ảnh kiểm thử           |
+| Nhận diện Enemy         | ≥ 90% trên bộ ảnh kiểm thử           |
+| Recovery khi bị kẹt     | ≤ 1,5 giây trong tình huống kiểm thử |
+| Hoạt động liên tục      | 10 lượt liên tiếp không crash        |
+| Khôi phục Memory        | Không mất dữ liệu sau khi restart    |
+| Cải thiện hiệu quả      | Có cải thiện đo được so với baseline |
+
+Không nên lấy một lần chạy thành công làm bằng chứng bot đã thông minh. Cần chạy nhiều lần với điều kiện tương đương và so sánh kết quả.
+
+## **8. Những quyết định kỹ thuật tôi khuyên giữ cố định**
+
+| Quyết định      | Khuyến nghị                                |
+| --------------- | ------------------------------------------ |
+| Ngôn ngữ        | Python tiếp tục được sử dụng               |
+| Computer Vision | OpenCV trước, Deep Learning sau nếu cần    |
+| Database        | SQLite                                     |
+| Điều khiển      | Một Action Engine duy nhất                 |
+| Chiến đấu       | Sequence                                   |
+| Kết thúc        | Fixed                                      |
+| Chọn kỹ năng    | Auto                                       |
+| Di chuyển       | Adaptive Navigation + fallback kiting      |
+| Học tập         | Online Strategy Evaluation                 |
+| Kiến trúc       | Modular, loosely coupled                   |
+| Kiểm thử        | Unit Test + Replay Test + Integration Test |
+
+Một số nguyên tắc không nên phá vỡ:
+
+1. Không để Memory trực tiếp gửi lệnh điều khiển game.
+2. Không để Perception tự quyết định chiến thuật.
+3. Không để Decision Engine thao tác trực tiếp với thư viện ADB.
+4. Không tự động thay đổi cấu hình quan trọng nếu chưa đánh giá kết quả.
+5. Không xóa chiến thuật kiting cũ trước khi chiến thuật mới được kiểm thử.
+6. Khi Perception mất độ tin cậy, phải có fallback an toàn.
+
+## **9. Ưu tiên đầu tư công sức**
+
+Nếu phải chọn phần nào đáng làm trước để đạt hiệu quả cao nhất, tôi xếp hạng như sau:
+
+**1. Perception + World Model**
+
+Rất cao
+
+Đây là nền tảng để bot hiểu tình hình. Không có nó thì Adaptive AI chỉ là ngẫu nhiên có kiểm soát.
+
+**2. Adaptive Navigation**
+
+Rất cao
+
+Cải thiện khả năng tránh quái, tránh vật cản, thoát kẹt và tìm đường bắn.
+
+**3. Persistent Memory**
+
+Cao
+
+Giúp bot không mất kinh nghiệm sau khi tắt chương trình.
+
+**4. Adaptive Learning**
+
+Cao
+
+Tối ưu chiến thuật dựa trên dữ liệu thật, nhưng chỉ có ý nghĩa khi Perception và Memory đáng tin cậy.
+
+**5. GUI thống kê và trực quan hóa**
+
+Cần thiết sau
+
+Giúp quan sát bot đang nghĩ gì, tại sao chọn hành động đó và kinh nghiệm thay đổi thế nào.
+
+## **10. Kết luận và định hướng cuối cùng**
+
+Tôi đánh giá hướng Hybrid AI là lựa chọn phù hợp nhất với TribalIslandBot hiện tại.
+
+Có ba cấp độ phát triển cần phân biệt:
+
+| Cấp độ                | Khả năng                                                  |
+| --------------------- | --------------------------------------------------------- |
+| Automation Bot        | Làm theo thao tác được lập trình                          |
+| Perception-driven Bot | Quan sát và phản ứng với môi trường                       |
+| Hybrid Adaptive Bot   | Quan sát, ra quyết định, ghi nhớ và cải thiện chiến thuật |
+
+Mục tiêu nên là cấp độ thứ ba, nhưng phải đi qua cấp độ thứ hai một cách chắc chắn.
+
+**Tôi không khuyến nghị Reinforcement Learning hoặc Neural Network ngay lúc này.** Chúng làm tăng độ phức tạp, khó kiểm soát và cần dữ liệu huấn luyện. Một hệ thống rule-based kết hợp scoring, persistent memory và adaptive strategy đã đủ tạo ra sự khác biệt lớn.
+
+### **Bước triển khai tiếp theo**
+
+Tôi đề xuất chốt một tài liệu kỹ thuật làm chuẩn trước khi sửa code:
+
+`TRIBAL_ISLAND_BOT_HYBRID_AI_ARCHITECTURE.md`
+
+Tài liệu này nên có:
+
+- Kiến trúc tổng thể và dependency graph.
+- Interface và dataclass chính xác giữa các module.
+- Database schema cho bộ nhớ dài hạn.
+- Luồng xử lý một frame và một lượt chơi.
+- Roadmap P1–P8, acceptance criteria.
+- Quy tắc tương thích với code cũ và cơ chế rollback.
+
+**Một nguyên tắc tôi muốn nhấn mạnh:** Không triển khai AI bằng cách thêm thật nhiều module. Hãy triển khai theo vòng lặp có thể đo lường: *Quan sát → Hiểu trạng thái → Ra quyết định → Hành động → Đánh giá → Ghi nhớ → Cải thiện*. Đây mới là phần cốt lõi tạo nên một bot Hybrid AI thực sự.

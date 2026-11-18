@@ -1,0 +1,7 @@
+{
+  "movement": ["w", "a", "s", "d"],
+  "attack": "j",
+  "special_skill": "space",
+  "heal_item": "l",
+  "select_perk": ["1", "2", "3"]
+}

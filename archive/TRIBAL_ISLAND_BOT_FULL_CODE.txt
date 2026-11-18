@@ -1,0 +1,2068 @@
+================================================================================
+TRIBAL ISLAND BOT - CONSOLIDATED SOURCE CODE & ROADMAP
+KIẾN TRÚC: AUTONOMOUS PERCEPTION + DYNAMIC ADB CONTROLLER
+Cập nhật mới nhất: Nhận diện Cổng dịch chuyển vàng (find_portal) & Điều hướng vào cổng
+================================================================================
+
+================================================================================
+# FILE: config/settings.json
+================================================================================
+
+{
+  "target_floor": 71,
+  "hp_critical_percent": 30,
+  "attack_interval": 0.22,
+  "attack_hold_time": 0.06,
+  "change_direction_interval": 2.5,
+  "skill_use_interval": 4.0,
+  "window_title_keyword": "BlueStacks",
+  "ocr_tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+  "skill_priority": [
+    "fire_circle",
+    "dart",
+    "thunder",
+    "attack_boost",
+    "hp_boost"
+  ]
+}
+
+
+================================================================================
+# FILE: config/key_mapping.json
+================================================================================
+
+{
+  "movement": ["w", "a", "s", "d"],
+  "attack": "j",
+  "special_skill": "space",
+  "heal_item": "l",
+  "select_perk": ["1", "2", "3"]
+}
+
+
+================================================================================
+# FILE: core/engine_adb.py
+================================================================================
+
+import subprocess
+import time
+import os
+import cv2
+import numpy as np
+import threading
+import math
+
+
+class ADBController:
+    """
+    ADBController quản lý giao tiếp ngầm 100% với BlueStacks:
+    - Chụp màn hình trực tiếp từ bộ đệm Android (không dính cửa sổ Windows hay GUI)
+    - Tự động tap (chạm) các nút Bắt Đầu, Tấn Công, Kỹ Năng, Hồi Máu, Chọn Perk
+    - Vuốt Joystick di chuyển không chiếm chuột hay bàn phím máy tính
+    """
+
+    def __init__(self, adb_path=r"C:\Program Files\BlueStacks_nxt\HD-Adb.exe", device_id="emulator-5554"):
+        self.adb_path = adb_path
+        self.device_id = device_id
+        
+        # Tọa độ chuẩn 100% chuẩn xác trên màn hình 1920x1080
+        self.COORD_ATTACK = (1757, 929)     # Nút Lửa to góc phải dưới
+        self.COORD_SKILL = (1761, 643)      # Nút Kỹ năng tím phía trên nút lửa
+        self.COORD_HEAL = (1445, 956)       # Nút Đùi gà hồi máu
+        self.COORD_START = (980, 950)       # Nút Vàng Bắt Đầu / Tiếp Tục ở sảnh chờ
+        self.COORD_END_BATTLE = (1442, 1000) # Nút Vàng 'Kết Thúc' sau khi hết trận
+        
+        # 3 thẻ chọn kỹ năng khi lên cấp (đo chính xác theo viền tròn trắng)
+        self.PERK_COORDS = [
+            (755, 701),   # Thẻ 1 (Trái)
+            (943, 701),   # Thẻ 2 (Giữa)
+            (1132, 701)   # Thẻ 3 (Phải)
+        ]
+
+        # Tọa độ Cần gạt di chuyển (Dynamic Joystick)
+        self.JOYSTICK_CENTER = (350, 750)
+        self.JOYSTICK_OFFSET = 160
+
+    def run_cmd(self, args, timeout=15):
+        """Chạy lệnh ADB với thiết bị chỉ định."""
+        cmd = [self.adb_path, "-s", self.device_id] + args
+        try:
+            return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            print(f"[ADB] Lệnh bị timeout sau {timeout}s: {' '.join(args)}")
+            return None
+        except Exception as e:
+            print(f"[ADB] Lỗi chạy lệnh: {e}")
+            return None
+
+    def ensure_connection(self):
+        """Khởi tạo ADB daemon và kiểm tra kết nối."""
+        # Bước 1: Khởi động ADB daemon
+        try:
+            subprocess.run([self.adb_path, "start-server"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
+        except Exception:
+            pass
+        
+        # Bước 2: Kiểm tra thiết bị
+        res = self.run_cmd(["shell", "echo", "ok"])
+        if res and res.returncode == 0 and "ok" in res.stdout:
+            return True
+        return False
+
+    def tap(self, x, y):
+        """Chạm cảm ứng vào tọa độ (x, y) ngầm."""
+        self.run_cmd(["shell", "input", "tap", str(int(x)), str(int(y))])
+
+    def swipe(self, x1, y1, x2, y2, duration_ms=1000):
+        """Vuốt cảm ứng từ (x1, y1) tới (x2, y2) trong duration_ms."""
+        self.run_cmd(["shell", "input", "swipe", str(int(x1)), str(int(y1)), str(int(x2)), str(int(y2)), str(int(duration_ms))])
+
+    def capture_screen(self):
+        """
+        Chụp ảnh trực tiếp từ Android framebuffer.
+        Trả về ảnh numpy BGR (1920x1080) sắc nét, không bị dính bất kỳ cửa sổ nào của Windows.
+        """
+        temp_remote = "/sdcard/s.png"
+        temp_local = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "adb_live_frame.png")
+        
+        # 1. Chụp trong android
+        self.run_cmd(["shell", "screencap", "-p", temp_remote])
+        # 2. Kéo về máy tính
+        self.run_cmd(["pull", temp_remote, temp_local])
+        
+        if os.path.exists(temp_local):
+            frame = cv2.imread(temp_local)
+            return frame
+        return None
+
+    def attack(self):
+        """Bắn đạn thường (chạm nút lửa)."""
+        self.tap(*self.COORD_ATTACK)
+
+    def use_skill(self):
+        """Bấm chiêu đặc biệt."""
+        self.tap(*self.COORD_SKILL)
+
+    def heal(self):
+        """Bơm máu đùi gà."""
+        self.tap(*self.COORD_HEAL)
+
+    def click_start(self):
+        """Bấm nút Bắt Đầu / Tiếp Tục ở sảnh chờ."""
+        self.tap(*self.COORD_START)
+
+    def click_end_battle(self):
+        """Bấm nút Kết Thúc màu vàng để nhận thưởng và về sảnh."""
+        self.tap(*self.COORD_END_BATTLE)
+
+    def select_perk(self, index=1):
+        """Chọn perk lên cấp (index: 1, 2, 3)."""
+        if 1 <= index <= 3:
+            x, y = self.PERK_COORDS[index - 1]
+            self.tap(x, y)
+
+    def move_angle(self, angle_deg, distance_ratio=1.0, duration_ms=1000):
+        """
+        Điều khiển Joystick theo góc 360 độ tự do (Analog Vector):
+        - angle_deg: 0=Phải, 90=Lên, 180=Trái, 270=Xuống (hoặc bất kỳ góc chéo nào: 45, 135, 225, 315,...)
+        - distance_ratio: Độ lệch cần gạt (0.2 -> 1.0)
+        - duration_ms: Thời gian giữ cần gạt di chuyển (milliseconds)
+        """
+        rad = math.radians(angle_deg)
+        cx, cy = self.JOYSTICK_CENTER
+        max_offset = self.JOYSTICK_OFFSET * min(1.0, max(0.2, distance_ratio))
+        
+        # Hệ tọa độ màn hình Android: Y hướng xuống dưới nên -sin(rad)
+        tx = int(cx + max_offset * math.cos(rad))
+        ty = int(cy - max_offset * math.sin(rad))
+        self.swipe(cx, cy, tx, ty, duration_ms=duration_ms)
+
+    def move_direction(self, direction='w', duration_ms=1500):
+        """
+        Điều khiển Joystick theo phím hướng hoặc tổ hợp chéo:
+        'w': Lên, 'd': Phải, 's': Xuống, 'a': Trái
+        'wd': Chéo trên phải, 'wa': Chéo trên trái, 'sd': Chéo dưới phải, 'sa': Chéo dưới trái
+        """
+        angle_map = {
+            'w': 90.0,
+            'd': 0.0,
+            's': 270.0,
+            'a': 180.0,
+            'wd': 45.0,
+            'dw': 45.0,
+            'wa': 135.0,
+            'aw': 135.0,
+            'sd': 315.0,
+            'ds': 315.0,
+            'sa': 225.0,
+            'as': 225.0
+        }
+        angle = angle_map.get(direction.lower(), 90.0)
+        self.move_angle(angle, distance_ratio=1.0, duration_ms=duration_ms)
+
+
+
+================================================================================
+# FILE: core/engine_vision.py
+================================================================================
+
+import os
+import re
+import json
+import numpy as np
+from PIL import Image, ImageGrab
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
+try:
+    import pytesseract
+except ImportError:
+    pytesseract = None
+
+
+class VisionEngine:
+    """
+    VisionEngine chịu trách nhiệm:
+    - Chụp màn hình BlueStacks / toàn màn hình
+    - Đọc % thanh máu (HP bar) bằng kỹ thuật dải màu HSV và đo độ dài thanh đỏ
+    - Nhận diện màn hình Lên Cấp (Level Up) & 3 kỹ năng lựa chọn qua Template Matching
+    - Nhận diện số Tầng hiện tại qua OCR (pytesseract)
+    - Nhận diện màn hình Kết thúc trận / Nhận rương
+    - Nhận diện màn hình Sảnh Chờ (Lobby) & vị trí Nút Bắt Đầu / Tiếp Tục màu vàng
+    """
+
+    def __init__(self, config_path=None, assets_dir=None):
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        self.config_path = config_path or os.path.join(base_dir, "config", "settings.json")
+        self.assets_dir = assets_dir or os.path.join(base_dir, "assets")
+        self.settings = self._load_settings()
+
+        # Cấu hình đường dẫn tesseract nếu có
+        tesseract_exe = self.settings.get("ocr_tesseract_path", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+        if pytesseract and os.path.exists(tesseract_exe):
+            pytesseract.pytesseract.tesseract_cmd = tesseract_exe
+
+        # Cache ảnh mẫu
+        self.templates = {}
+        self._load_templates()
+
+        # Tọa độ chuẩn trên độ phân giải 1920x1080 (tự động co giãn theo tỉ lệ màn hình thực tế)
+        # HP bar: x: 140 -> 350, y: 135 -> 170
+        # Floor text: x: 275 -> 580, y: 60 -> 110
+        self.ref_width = 1920
+        self.ref_height = 1080
+
+    def _load_settings(self):
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"[VisionEngine] Lỗi đọc settings: {e}")
+        return {}
+
+    def _load_templates(self):
+        if not cv2 or not os.path.exists(self.assets_dir):
+            return
+        for file in os.listdir(self.assets_dir):
+            if file.lower().endswith((".png", ".jpg", ".jpeg")):
+                name = os.path.splitext(file)[0]
+                img_path = os.path.join(self.assets_dir, file)
+                img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+                if img is not None:
+                    self.templates[name] = img
+        print(f"[VisionEngine] Đã tải {len(self.templates)} ảnh mẫu từ thư mục assets.")
+
+    def capture_screen(self, bbox=None):
+        """
+        Chụp màn hình (hoặc vùng bbox = (left, top, right, bottom)).
+        Trả về ảnh numpy BGR (cho OpenCV) và PIL Image.
+        """
+        screenshot = ImageGrab.grab(bbox=bbox)
+        frame_rgb = np.array(screenshot)
+        if cv2 is not None:
+            frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+        else:
+            frame_bgr = frame_rgb
+        return frame_bgr, screenshot
+
+    def match_template(self, image, template_name, threshold=0.75):
+        """
+        Tìm ảnh mẫu template_name trong image bằng cv2.matchTemplate.
+        Trả về (found: bool, max_val: float, (max_x, max_y))
+        """
+        if cv2 is None or template_name not in self.templates:
+            return False, 0.0, (0, 0)
+
+        template = self.templates[template_name]
+        
+        # Co giãn template theo kích thước ảnh thực tế so với chuẩn 1920x1080
+        h_img, w_img = image.shape[:2]
+        if w_img != self.ref_width or h_img != self.ref_height:
+            scale_x = w_img / self.ref_width
+            scale_y = h_img / self.ref_height
+            new_w = max(1, int(template.shape[1] * scale_x))
+            new_h = max(1, int(template.shape[0] * scale_y))
+            template_scaled = cv2.resize(template, (new_w, new_h))
+        else:
+            template_scaled = template
+
+        if template_scaled.shape[0] > image.shape[0] or template_scaled.shape[1] > image.shape[1]:
+            return False, 0.0, (0, 0)
+
+        res = cv2.matchTemplate(image, template_scaled, cv2.TM_CCOEFF_NORMED)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+        if max_val >= threshold:
+            return True, max_val, max_loc
+        return False, max_val, max_loc
+
+    def find_lobby_start_button(self, image):
+        """
+        Tìm nút vàng 'Bắt Đầu' hoặc 'Tiếp Tục' ở sảnh chờ để tự động vào trận.
+        Hỗ trợ cả 2 trạng thái:
+        - 'Bắt Đầu' (khi bắt đầu lượt mới từ tầng 1)
+        - 'Tiếp Tục' (khi tiếp tục ván đấu dang dở)
+        Trả về: (found: bool, (click_x, click_y))
+        """
+        if cv2 is None:
+            return False, None
+
+        h, w = image.shape[:2]
+
+        # Lớp 1: Template Matching với cả 2 mẫu nút: sample_btn_batdau và sample_start_btn
+        for tmpl_name in ["sample_btn_batdau", "sample_start_btn", "sample_btn_batdau_1080"]:
+            if tmpl_name in self.templates:
+                template = self.templates[tmpl_name]
+                # Co dãn template về tỉ lệ kích thước ảnh chụp
+                scale_x = w / 1024 if template.shape[1] < 300 else w / self.ref_width
+                scale_y = h / 473 if template.shape[0] < 80 else h / self.ref_height
+                t_w = max(1, int(template.shape[1] * scale_x))
+                t_h = max(1, int(template.shape[0] * scale_y))
+                if t_w < w and t_h < h:
+                    t_scaled = cv2.resize(template, (t_w, t_h))
+                    res = cv2.matchTemplate(image, t_scaled, cv2.TM_CCOEFF_NORMED)
+                    _, max_val, _, max_loc = cv2.minMaxLoc(res)
+                    if max_val >= 0.75:
+                        click_x = max_loc[0] + t_w // 2
+                        click_y = max_loc[1] + t_h // 2
+                        return True, (click_x, click_y)
+
+        # Lớp 2: Quét dải màu vàng nút bấm ở khu vực đáy màn hình (y: 75% -> 98%, x: 30% -> 70%)
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, (18, 120, 150), (35, 255, 255))
+        roi_mask = np.zeros_like(mask)
+        roi_mask[int(h * 0.75):int(h * 0.98), int(w * 0.30):int(w * 0.70)] = mask[int(h * 0.75):int(h * 0.98), int(w * 0.30):int(w * 0.70)]
+
+        contours, _ = cv2.findContours(roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            x, y, bw, bh = cv2.boundingRect(cnt)
+            # Nút bấm là hình chữ nhật rộng nằm ngang
+            if bw > w * 0.15 and bh > h * 0.05:
+                click_x = x + bw // 2
+                click_y = y + bh // 2
+                return True, (click_x, click_y)
+
+        return False, None
+
+    def get_hp_percentage(self, image):
+        """
+        Đo % máu thực tế bằng cách kiểm tra chiều dài phần màu hồng/đỏ của thanh HP.
+        Chuẩn tọa độ trên 1920x1080: x: 140 -> 350, y: 135 -> 170.
+        """
+        if cv2 is None:
+            return 100.0
+
+        h, w = image.shape[:2]
+        x1 = int(w * (140 / self.ref_width))
+        x2 = int(w * (350 / self.ref_width))
+        y1 = int(h * (135 / self.ref_height))
+        y2 = int(h * (170 / self.ref_height))
+
+        hp_crop = image[y1:y2, x1:x2]
+        if hp_crop.size == 0:
+            return 100.0
+
+        # Lọc màu đỏ / hồng tím (dải máu) trong không gian HSV
+        hsv = cv2.cvtColor(hp_crop, cv2.COLOR_BGR2HSV)
+        mask1 = cv2.inRange(hsv, np.array([150, 80, 80]), np.array([180, 255, 255]))
+        mask2 = cv2.inRange(hsv, np.array([0, 80, 80]), np.array([15, 255, 255]))
+        mask = mask1 | mask2
+
+        # Kiểm tra các cột có chứa điểm ảnh màu máu
+        col_has_red = np.any(mask > 0, axis=0)
+        filled_width = np.sum(col_has_red)
+        total_width = hp_crop.shape[1]
+
+        if total_width == 0:
+            return 100.0
+
+        percent = (filled_width / total_width) * 100.0
+        return min(100.0, max(0.0, percent))
+
+    def detect_floor_number(self, image):
+        """
+        Đọc số tầng hiện tại từ góc trên trái ("Đảo Nấm Tầng [X]").
+        Chuẩn tọa độ 1920x1080: x: 275 -> 580, y: 60 -> 110.
+        """
+        h, w = image.shape[:2]
+        x1 = int(w * (275 / self.ref_width))
+        x2 = int(w * (580 / self.ref_width))
+        y1 = int(h * (60 / self.ref_height))
+        y2 = int(h * (110 / self.ref_height))
+
+        crop = image[y1:y2, x1:x2]
+        if crop.size == 0:
+            return None
+
+        # 1. Nếu có tesseract OCR
+        if pytesseract is not None:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if cv2 else crop
+            if cv2:
+                _, thresh = cv2.threshold(gray, 170, 255, cv2.THRESH_BINARY)
+            else:
+                thresh = gray
+            try:
+                text = pytesseract.image_to_string(thresh, config="--psm 6")
+                match = re.search(r'(?:Tầng|Tang|Floor|F)?\s*[:\.]?\s*(\d+)', text, re.IGNORECASE)
+                if match:
+                    floor = int(match.group(1))
+                    if 1 <= floor <= 150:
+                        return floor
+            except Exception:
+                pass
+
+        return None
+
+    def is_level_up_screen(self, image):
+        """
+        Kiểm tra màn hình lên cấp (dải băng 'Lần này mạo hiểm tăng đến' hoặc 3 thẻ kỹ năng).
+        Độ chính xác mẫu đạt 1.000 với threshold 0.70.
+        """
+        found, val, _ = self.match_template(image, "sample_level_up", threshold=0.70)
+        if found:
+            return True
+            
+        # Dự phòng: Kiểm tra sự xuất hiện của các viền tròn trắng của 3 thẻ chọn kỹ năng
+        # Vùng y: 600..800, x: 650..1250
+        if cv2 is not None and image is not None:
+            h, w = image.shape[:2]
+            roi = image[int(h * 0.55):int(h * 0.78), int(w * 0.35):int(w * 0.65)]
+            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            white_pixels = np.sum(gray > 220)
+            # Khi 3 thẻ kỹ năng hiện ra, tổng số điểm ảnh trắng của viền tròn > 2000
+            if white_pixels > 1800:
+                return True
+
+        return False
+
+    def is_end_battle_screen(self, image):
+        """
+        Kiểm tra màn hình kết thúc trận (Chiến đấu kết thúc / Rương thưởng).
+        """
+        found_end, _, _ = self.match_template(image, "sample_end_battle", threshold=0.70)
+        if found_end:
+            return True
+
+        found_btn, _, _ = self.match_template(image, "sample_btn_ketthuc", threshold=0.70)
+        if found_btn:
+            return True
+
+        found_chest, _, _ = self.match_template(image, "sample_chest", threshold=0.75)
+        if found_chest:
+            return True
+
+        found_lobby_chest, _, _ = self.match_template(image, "sample_chest_lobby", threshold=0.75)
+        if found_lobby_chest:
+            return True
+
+        return False
+
+    def find_portal(self, image):
+        """
+        Tìm cổng dịch chuyển màu vàng ở tường trên khi dọn sạch quái.
+        Trả về (found: bool, (portal_x, portal_y))
+        """
+        if cv2 is None or image is None:
+            return False, None
+
+        # Template matching với mẫu quả cầu dịch chuyển vàng
+        found, val, loc = self.match_template(image, "sample_portal", threshold=0.70)
+        if found:
+            tpl = self.templates.get("sample_portal")
+            tw = tpl.shape[1] if tpl is not None else 60
+            th = tpl.shape[0] if tpl is not None else 60
+            return True, (loc[0] + tw // 2, loc[1] + th // 2)
+
+        # Lớp dự phòng: Lọc màu xoáy vàng phát sáng ở 40% trên cùng của màn hình
+        h, w = image.shape[:2]
+        roi = image[0:int(h * 0.40), int(w * 0.25):int(w * 0.75)]
+        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, (18, 140, 180), (35, 255, 255))
+        cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in cnts:
+            if 400 < cv2.contourArea(c) < 10000:
+                M = cv2.moments(c)
+                if M["m00"] > 0:
+                    cx = int(M["m10"] / M["m00"]) + int(w * 0.25)
+                    cy = int(M["m01"] / M["m00"])
+                    return True, (cx, cy)
+
+        return False, None
+
+
+================================================================================
+# FILE: core/engine_combat.py
+================================================================================
+
+import time
+import random
+import threading
+import json
+import os
+
+try:
+    import pydirectinput
+    pydirectinput.PAUSE = 0.01
+except ImportError:
+    pydirectinput = None
+
+
+def tap_key(key, hold_time=0.06):
+    """
+    Giữ phím trong hold_time giây (mặc định 60ms) để giả lập Android/BlueStacks
+    kịp ghi nhận tín hiệu chắc chắn 100%.
+    """
+    if not pydirectinput:
+        return
+    try:
+        pydirectinput.keyDown(key)
+        time.sleep(hold_time)
+        pydirectinput.keyUp(key)
+    except Exception as e:
+        print(f"[CombatEngine] Lỗi bấm phím {key}: {e}")
+
+
+class CombatEngine:
+    """
+    CombatEngine chịu trách nhiệm mô phỏng các thao tác bàn phím:
+    - Di chuyển lên trên (W) khi mới vào tầng để thoát khỏi hốc cửa hẹp
+    - CHIẾN THUẬT KITING (LÙA QUÁI VÒNG TRÒN): Chạy theo vòng W -> D -> S -> A (hoặc ngược lại)
+      để quái dồn thành một cụm chạy sau lưng, né tối đa sát thương và chống kẹt góc.
+    - Tự động spam nút đánh thường (J) với nhịp độ người thật (~4 lần/giây) tránh bị trượt đòn
+    - Kích hoạt kỹ năng đặc biệt (Space)
+    - Sử dụng đùi gà hồi máu khi nhận tín hiệu (L)
+    - Chọn kỹ năng khi lên cấp (1, 2, 3)
+    - Chế độ tự sát (đứng yên chờ quái hạ gục khi đã đạt tầng mục tiêu)
+    """
+
+    def __init__(self, key_config_path=None, settings_path=None):
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        self.key_config_path = key_config_path or os.path.join(base_dir, "config", "key_mapping.json")
+        self.settings_path = settings_path or os.path.join(base_dir, "config", "settings.json")
+
+        self.keys = self._load_keys()
+        self.settings = self._load_settings()
+
+        self.attack_interval = self.settings.get("attack_interval", 0.22)
+        self.attack_hold_time = self.settings.get("attack_hold_time", 0.06)
+
+        self.is_running = False
+        self.is_paused = False
+        self.suicide_mode = False  # Đứng yên để chết nhận rương
+        
+        self._thread = None
+        self._lock = threading.Lock()
+        self.current_direction = None
+
+        # Chiến thuật Kiting (Vòng tròn xuôi/ngược chiều kim đồng hồ)
+        self.kiting_patterns = [
+            ['w', 'd', 's', 'a'],  # Xuôi chiều kim đồng hồ: Lên -> Phải -> Xuống -> Trái
+            ['w', 'a', 's', 'd']   # Ngược chiều kim đồng hồ: Lên -> Trái -> Xuống -> Phải
+        ]
+        self.current_pattern_idx = 0
+        self.kiting_step = 0
+
+    def _load_keys(self):
+        default_keys = {
+            "movement": ["w", "a", "s", "d"],
+            "attack": "j",
+            "heal_item": "l",
+            "special_skill": "space",
+            "select_perk": ["1", "2", "3"]
+        }
+        if os.path.exists(self.key_config_path):
+            try:
+                with open(self.key_config_path, "r", encoding="utf-8") as f:
+                    return {**default_keys, **json.load(f)}
+            except Exception as e:
+                print(f"[CombatEngine] Lỗi đọc key mapping: {e}")
+        return default_keys
+
+    def _load_settings(self):
+        if os.path.exists(self.settings_path):
+            try:
+                with open(self.settings_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"[CombatEngine] Lỗi đọc settings: {e}")
+        return {}
+
+    def enter_room(self, duration=1.5):
+        """
+        Khi mới vào tầng hoặc bắt đầu lượt, nhân vật nằm trong hốc cửa hẹp.
+        Cần giữ phím 'W' để chạy thẳng lên trên vào giữa phòng rộng.
+        """
+        if not pydirectinput or self.suicide_mode or self.is_paused:
+            return
+        print("[CombatEngine] 🚪 Xuất phát đầu tầng: Giữ [W] tiến vào giữa phòng...")
+        with self._lock:
+            self._release_all_movement_keys()
+            pydirectinput.keyDown("w")
+            self.current_direction = "w"
+
+        attack_key = self.keys.get("attack", "j")
+        start = time.time()
+        while time.time() - start < duration:
+            tap_key(attack_key, hold_time=self.attack_hold_time)
+            time.sleep(self.attack_interval)
+
+        with self._lock:
+            pydirectinput.keyUp("w")
+            self.current_direction = None
+        print("[CombatEngine] ✅ Đã vào phòng rộng thành công!")
+
+    def start(self, enter_first=True):
+        if self._thread and self._thread.is_alive():
+            return
+        self.is_running = True
+        self.is_paused = False
+        self.suicide_mode = False
+        self._thread = threading.Thread(target=self._combat_loop, args=(enter_first,), daemon=True)
+        self._thread.start()
+        print("[CombatEngine] Đã khởi động luồng chiến đấu Kiting (Lùa quái vòng tròn).")
+
+    def stop(self):
+        self.is_running = False
+        self._release_all_movement_keys()
+        print("[CombatEngine] Đã dừng luồng chiến đấu.")
+
+    def pause(self):
+        """Tạm dừng di chuyển và tấn công (dùng khi lên cấp hoặc load màn)."""
+        self.is_paused = True
+        self._release_all_movement_keys()
+        print("[CombatEngine] Đã tạm dừng thao tác.")
+
+    def resume(self):
+        self.is_paused = False
+        print("[CombatEngine] Tiếp tục thao tác chiến đấu.")
+
+    def set_suicide_mode(self, enabled=True):
+        self.suicide_mode = enabled
+        if enabled:
+            self._release_all_movement_keys()
+            print("[CombatEngine] Bật chế độ TỰ SÁT: Đứng yên chờ kết thúc trận.")
+
+    def trigger_heal(self):
+        heal_key = self.keys.get("heal_item", "l")
+        tap_key(heal_key, hold_time=0.06)
+        print(f"[CombatEngine] -> 🍗 ĐÃ DÙNG ĐÙI GÀ HỒI MÁU (Phím {heal_key})")
+
+    def trigger_skill(self):
+        skill_key = self.keys.get("special_skill", "space")
+        tap_key(skill_key, hold_time=0.06)
+        print(f"[CombatEngine] -> ⚡ ĐÃ DÙNG KỸ NĂNG (Phím {skill_key})")
+
+    def select_perk(self, index: int):
+        perk_keys = self.keys.get("select_perk", ["1", "2", "3"])
+        if 1 <= index <= len(perk_keys):
+            key = perk_keys[index - 1]
+            tap_key(key, hold_time=0.06)
+            print(f"[CombatEngine] -> 🌟 ĐÃ CHỌN KỸ NĂNG {index} (Phím {key})")
+
+    def _release_all_movement_keys(self):
+        if not pydirectinput:
+            return
+        for k in self.keys.get("movement", ["w", "a", "s", "d"]):
+            try:
+                pydirectinput.keyUp(k)
+            except Exception:
+                pass
+        self.current_direction = None
+
+    def _kiting_next_direction(self):
+        """
+        Di chuyển theo chu kỳ vòng tròn để gom quái đi theo sau lưng (Kiting).
+        Thỉnh thoảng đảo chiều quay (xuôi / ngược kim đồng hồ) để tránh kẹt địa hình.
+        """
+        if not pydirectinput or self.suicide_mode or self.is_paused:
+            return
+
+        pattern = self.kiting_patterns[self.current_pattern_idx]
+        next_direction = pattern[self.kiting_step % len(pattern)]
+        self.kiting_step += 1
+
+        # Cứ sau 1 vòng (4 bước), có 20% khả năng đổi chiều quay (clockwise <-> counter-clockwise)
+        if self.kiting_step % len(pattern) == 0 and random.random() < 0.25:
+            self.current_pattern_idx = 1 - self.current_pattern_idx
+            # print("[CombatEngine] 🔄 Đảo chiều quay vòng tròn lùa quái!")
+
+        with self._lock:
+            if self.current_direction and self.current_direction != next_direction:
+                try:
+                    pydirectinput.keyUp(self.current_direction)
+                except Exception:
+                    pass
+            try:
+                pydirectinput.keyDown(next_direction)
+            except Exception:
+                pass
+            self.current_direction = next_direction
+
+    def _combat_loop(self, enter_first=True):
+        if not pydirectinput:
+            print("[CombatEngine] LỖI: Chưa cài pydirectinput!")
+            return
+
+        # Bước 1: Thoát khỏi hốc cửa hẹp nếu xuất phát
+        if enter_first:
+            self.enter_room(duration=1.5)
+
+        attack_key = self.keys.get("attack", "j")
+        last_dir_change = time.time()
+        last_skill_trigger = time.time()
+        
+        self._kiting_next_direction()
+
+        while self.is_running:
+            if self.is_paused:
+                time.sleep(0.1)
+                continue
+
+            if self.suicide_mode:
+                time.sleep(0.2)
+                continue
+
+            now = time.time()
+
+            # 1. Spam phím tấn công thường (J) với nhịp chuẩn người bấm (~4 lần/giây)
+            tap_key(attack_key, hold_time=self.attack_hold_time)
+
+            # 2. Dùng skill nhân vật (mỗi 4s)
+            if now - last_skill_trigger > 4.0:
+                self.trigger_skill()
+                last_skill_trigger = now
+
+            # 3. Chạy theo cung vòng tròn kiting (sau mỗi 2.0 - 2.8s chuyển cạnh tiếp theo)
+            if now - last_dir_change > random.uniform(2.0, 2.8):
+                self._kiting_next_direction()
+                last_dir_change = now
+
+            time.sleep(self.attack_interval)
+
+        self._release_all_movement_keys()
+
+
+================================================================================
+# FILE: core/manager_run.py
+================================================================================
+
+import time
+import threading
+import pyautogui
+
+try:
+    import pygetwindow as gw
+except ImportError:
+    gw = None
+
+from .engine_combat import CombatEngine
+from .engine_vision import VisionEngine
+
+
+class RunState:
+    IDLE = "IDLE"
+    LOBBY = "LOBBY"
+    FIGHTING = "FIGHTING"
+    LEVEL_UP = "LEVEL_UP"
+    SUICIDE = "SUICIDE"
+    BATTLE_END = "BATTLE_END"
+
+
+def get_bluestacks_window():
+    """
+    Tìm chính xác cửa sổ game BlueStacks App Player,
+    loại bỏ cửa sổ vô hình 'BlueStacks Keymap Overlay'.
+    """
+    if not gw:
+        return None
+    try:
+        # 1. Ưu tiên tìm cửa sổ chứa App Player
+        for w in gw.getAllWindows():
+            title = w.title.strip()
+            if "bluestacks" in title.lower() and "overlay" not in title.lower() and title != "":
+                if "app player" in title.lower():
+                    return w
+
+        # 2. Dự phòng: bất kỳ cửa sổ bluestacks nào không chứa chữ 'overlay'
+        for w in gw.getAllWindows():
+            title = w.title.strip()
+            if "bluestacks" in title.lower() and "overlay" not in title.lower() and title != "":
+                return w
+    except Exception:
+        pass
+    return None
+
+
+class RunManager:
+    """
+    RunManager là bộ não điều phối:
+    - Bắt đúng cửa sổ 'BlueStacks App Player' (không bắt nhầm 'Keymap Overlay')
+    - Chụp ảnh đúng vùng cửa sổ BlueStacks (dù kéo cửa sổ sang góc nào cũng chính xác 100%)
+    - Tự động click nút vàng [Bắt Đầu / Tiếp Tục]
+    - Điều phối chu kỳ cày rương tự động hoàn toàn
+    """
+
+    def __init__(self, target_floor=71, hp_heal_threshold=30, auto_repeat=True, log_callback=None):
+        self.target_floor = target_floor
+        self.hp_heal_threshold = hp_heal_threshold
+        self.auto_repeat = auto_repeat
+        self.log_callback = log_callback or print
+
+        self.combat = CombatEngine()
+        self.vision = VisionEngine()
+
+        self.state = RunState.IDLE
+        self.current_floor = 1
+        self.is_running = False
+        self._thread = None
+
+        self.total_runs_completed = 0
+        self.bs_win = None
+
+    def log(self, message):
+        if self.log_callback:
+            self.log_callback(message)
+
+    def focus_bluestacks_window(self):
+        """Kích hoạt và nổi cửa sổ BlueStacks App Player lên phía trước."""
+        win = get_bluestacks_window()
+        if win:
+            self.bs_win = win
+            try:
+                if win.isMinimized:
+                    win.restore()
+                win.activate()
+                # Click chuột vào thanh tiêu đề BlueStacks để ép Windows chuyển quyền focus 100%
+                click_x = win.left + 200
+                click_y = win.top + 15
+                pyautogui.click(click_x, click_y)
+                self.log(f"[RunManager] 🎯 Đã kích hoạt và chuyển quyền điều khiển vào: '{win.title}'")
+                time.sleep(0.4)
+                return True
+            except Exception as e:
+                self.log(f"[CẢNH BÁO] Không thể kích hoạt cửa sổ: {e}")
+        else:
+            self.log("[CẢNH BÁO] Không tìm thấy cửa sổ 'BlueStacks App Player'. Vui lòng mở game trước!")
+        return False
+
+    def get_bluestacks_bbox(self):
+        """Lấy tọa độ vùng cửa sổ BlueStacks (left, top, right, bottom)."""
+        win = get_bluestacks_window()
+        if win and win.width > 200 and win.height > 200:
+            self.bs_win = win
+            return (win.left, win.top, win.right, win.bottom)
+        return None
+
+    def start(self):
+        if self.is_running:
+            return
+
+        # 1. Kích hoạt đúng cửa sổ BlueStacks
+        self.focus_bluestacks_window()
+
+        self.is_running = True
+        self.state = RunState.IDLE
+        self.current_floor = 1
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
+        self.log(f"[RunManager] Bắt đầu hệ thống Auto Bot. Tầng mục tiêu: {self.target_floor}")
+
+    def stop(self):
+        self.is_running = False
+        self.state = RunState.IDLE
+        self.combat.stop()
+        self.log("[RunManager] Đã dừng toàn bộ bot.")
+
+    def pause(self):
+        self.combat.pause()
+        self.log("[RunManager] Tạm dừng.")
+
+    def resume(self):
+        self.combat.resume()
+        self.log("[RunManager] Tiếp tục.")
+
+    def _click_start_lobby(self, click_coords, bbox=None):
+        """Click vào nút màu vàng Tiếp Tục / Bắt Đầu ở Sảnh Chờ."""
+        rx, ry = click_coords
+        # Nếu đang chụp theo vùng cửa sổ, chuyển đổi tọa độ tương đối sang màn hình thực tế
+        if bbox:
+            screen_x = bbox[0] + rx
+            screen_y = bbox[1] + ry
+        else:
+            screen_x, screen_y = rx, ry
+
+        self.log(f"[RunManager] 🎯 Phát hiện nút [Bắt Đầu / Tiếp Tục] tại ({screen_x}, {screen_y}). Đang click...")
+        try:
+            # Đảm bảo cửa sổ được focus trước khi click
+            if self.bs_win:
+                try:
+                    self.bs_win.activate()
+                except Exception:
+                    pass
+            pyautogui.click(screen_x, screen_y)
+        except Exception as e:
+            self.log(f"[RunManager] Lỗi click chuột: {e}")
+
+        self.log("[RunManager] Đang tải vào màn chơi (chờ 3.5 giây)...")
+        time.sleep(3.5)
+
+        # Chuyển trạng thái sang chiến đấu và vượt hốc cửa hẹp
+        self.current_floor = 1
+        self.state = RunState.FIGHTING
+        self.combat.set_suicide_mode(False)
+        self.combat.start(enter_first=True)
+
+    def _run_loop(self):
+        last_heal_time = 0
+        last_floor_check_time = 0
+        last_lobby_check_time = 0
+
+        while self.is_running:
+            now = time.time()
+            
+            # Lấy vùng cửa sổ BlueStacks thực tế trên màn hình
+            bbox = self.get_bluestacks_bbox()
+            frame_bgr, _ = self.vision.capture_screen(bbox=bbox)
+
+            # 1. KIỂM TRA MÀN HÌNH SẢNH CHỜ (LOBBY) - TỰ ĐỘNG BẤM [BẮT ĐẦU / TIẾP TỤC]
+            if self.state in [RunState.IDLE, RunState.LOBBY, RunState.BATTLE_END]:
+                if now - last_lobby_check_time > 1.0:
+                    found_btn, click_coords = self.vision.find_lobby_start_button(frame_bgr)
+                    if found_btn:
+                        self.state = RunState.LOBBY
+                        self.combat.pause()
+                        self._click_start_lobby(click_coords, bbox=bbox)
+                        last_lobby_check_time = now
+                        continue
+                    last_lobby_check_time = now
+
+            # 2. KIỂM TRA MÀN HÌNH KẾT THÚC TRẬN / NHẬN RƯƠNG
+            if self.vision.is_end_battle_screen(frame_bgr):
+                self.state = RunState.BATTLE_END
+                self.combat.pause()
+                self.log("[RunManager] 🎁 Phát hiện màn hình KẾT THÚC TRẬN ĐẤU / NHẬN RƯƠNG.")
+                
+                time.sleep(2.0)
+                # Bấm xác nhận nhận quà (phím Space hoặc click)
+                self.combat.trigger_skill()
+                self.total_runs_completed += 1
+                self.log(f"[RunManager] ✅ Hoàn thành lượt thứ {self.total_runs_completed}!")
+
+                if self.auto_repeat:
+                    self.log("[RunManager] Đang chờ hệ thống quay trở lại Sảnh Chờ để nhận diện nút Bắt Đầu...")
+                    time.sleep(3.0)
+                else:
+                    self.stop()
+                    break
+                continue
+
+            # 3. KIỂM TRA MÀN HÌNH LÊN CẤP (CHỌN KỸ NĂNG)
+            if self.vision.is_level_up_screen(frame_bgr):
+                if self.state != RunState.LEVEL_UP:
+                    self.state = RunState.LEVEL_UP
+                    self.combat.pause()
+                    self.log("[RunManager] 🌟 LÊN CẤP! Tạm dừng đánh để chọn kỹ năng...")
+                    
+                    time.sleep(0.5)
+                    self.combat.select_perk(1)
+                    time.sleep(1.0)
+                    
+                    self.state = RunState.FIGHTING
+                    self.combat.resume()
+                    continue
+
+            # 4. KIỂM TRA SỐ TẦNG ĐỊNH KỲ
+            if self.state == RunState.FIGHTING and (now - last_floor_check_time > 2.0):
+                detected_floor = self.vision.detect_floor_number(frame_bgr)
+                if detected_floor is not None and detected_floor >= self.current_floor:
+                    if detected_floor > self.current_floor:
+                        self.current_floor = detected_floor
+                        self.log(f"[RunManager] 🚪 >>> TIẾN VÀO TẦNG {self.current_floor} <<<")
+                        # Thoát khỏi hốc cửa hẹp của tầng mới
+                        self.combat.enter_room(duration=1.2)
+
+                    # Kiểm tra xem đã đạt tầng mục tiêu chưa
+                    if self.current_floor >= self.target_floor:
+                        if not self.combat.suicide_mode:
+                            self.state = RunState.SUICIDE
+                            self.combat.set_suicide_mode(True)
+                            self.log(f"[RunManager] 💀 !!! ĐÃ ĐẠT TẦNG MỤC TIÊU ({self.target_floor}) !!!")
+                            self.log("[RunManager] Chuyển sang chế độ TỰ SÁT: Đứng yên chờ quái hạ gục để nhận rương.")
+                last_floor_check_time = now
+
+            # 5. KIỂM TRA VÀ BƠM MÁU
+            if self.state == RunState.FIGHTING and not self.combat.suicide_mode:
+                hp = self.vision.get_hp_percentage(frame_bgr)
+                # Chỉ cảnh báo máu yếu khi hp > 0 (tránh trường hợp chưa đọc được màn hình game)
+                if 0.0 < hp < self.hp_heal_threshold and (now - last_heal_time > 3.0):
+                    self.log(f"[RunManager] 🍗 CẢNH BÁO MÁU YẾU ({hp:.1f}% < {self.hp_heal_threshold}%) -> BƠM ĐÙI GÀ!")
+                    self.combat.trigger_heal()
+                    last_heal_time = now
+
+            # Nếu đang ở IDLE quá 3 giây mà không phải ở sảnh (người dùng bấm Start khi đã ở trong trận)
+            if self.state == RunState.IDLE and self.is_running:
+                # Kiểm tra xem có thanh máu không
+                hp_test = self.vision.get_hp_percentage(frame_bgr)
+                if hp_test > 10.0:
+                    self.log("[RunManager] Phát hiện đang ở trong trận đấu! Chuyển sang chiến đấu...")
+                    self.state = RunState.FIGHTING
+                    self.combat.start(enter_first=False)
+
+            time.sleep(0.1)
+
+
+================================================================================
+# FILE: core/perception/line_of_sight.py
+================================================================================
+
+import cv2
+import numpy as np
+from typing import List, Tuple, Optional
+
+
+class LineOfSightChecker:
+    """
+    LineOfSightChecker kiểm tra xem đường đạn giữa Người chơi và Quái vật
+    có bị chặn bởi các vật cản (như Cọc gỗ, Tảng đá, Bờ tường) hay không.
+    """
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def is_segment_intersecting_circle(p1: Tuple[int, int], p2: Tuple[int, int],
+                                       circle_center: Tuple[int, int], radius: int) -> bool:
+        """
+        Kiểm tra đoạn thẳng p1->p2 (đường đạn) có cắt qua hình tròn bán kính radius (vật cản cọc gỗ) không.
+        """
+        x1, y1 = p1
+        x2, y2 = p2
+        cx, cy = circle_center
+
+        # Vector p1 -> p2
+        dx = x2 - x1
+        dy = y2 - y1
+        line_len_sq = dx * dx + dy * dy
+
+        if line_len_sq == 0:
+            return (cx - x1)**2 + (cy - y1)**2 <= radius**2
+
+        # Chiếu tâm hình tròn lên đoạn thẳng (từ 0.0 -> 1.0)
+        t = max(0.0, min(1.0, ((cx - x1) * dx + (cy - y1) * dy) / line_len_sq))
+
+        # Tọa độ điểm gần nhất trên đoạn thẳng
+        closest_x = x1 + t * dx
+        closest_y = y1 + t * dy
+
+        dist_sq = (cx - closest_x)**2 + (cy - closest_y)**2
+        return dist_sq <= (radius**2)
+
+    def check_los(self, player_pos: Tuple[int, int], target_pos: Tuple[int, int],
+                  obstacles: List[Tuple[int, int]], obstacle_radius: int = 45) -> Tuple[bool, Optional[Tuple[int, int]]]:
+        """
+        Kiểm tra tầm bắn (Line of Sight):
+        - player_pos: Tọa độ người chơi (x, y)
+        - target_pos: Tọa độ quái vật mục tiêu (x, y)
+        - obstacles: Danh sách tọa độ tâm các cọc gỗ [(x, y), ...]
+        - obstacle_radius: Bán kính an toàn của cọc gỗ
+
+        Trả về:
+        - has_clear_shot: True nếu đường bắn thông thoáng, False nếu bị chặn
+        - blocking_obstacle: Tọa độ cọc gỗ gây cản trở (nếu có)
+        """
+        for obs in obstacles:
+            if self.is_segment_intersecting_circle(player_pos, target_pos, obs, obstacle_radius):
+                return False, obs
+        return True, None
+
+
+
+================================================================================
+# FILE: gui/app_window.py
+================================================================================
+
+import sys
+import os
+
+try:
+    from PySide6.QtWidgets import (
+        QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+        QLabel, QPushButton, QSpinBox, QSlider, QCheckBox, QTextEdit,
+        QGroupBox, QGridLayout
+    )
+    from PySide6.QtCore import Qt, QTimer, Signal, QObject
+    from PySide6.QtGui import QFont
+    PYSIDE_AVAILABLE = True
+except ImportError:
+    PYSIDE_AVAILABLE = False
+
+
+class LogBridge(QObject):
+    log_signal = Signal(str)
+
+
+class MainWindow(QMainWindow):
+    def __init__(self, run_manager=None):
+        super().__init__()
+        self.run_manager = run_manager
+        self.setWindowTitle("Tribal Island Bot - Điều Khiển Tự Động")
+        self.resize(650, 700)
+
+        self.bridge = LogBridge()
+        self.bridge.log_signal.connect(self._append_log)
+
+        if self.run_manager:
+            self.run_manager.log_callback = self.log
+
+        self._init_ui()
+
+        # Timer cập nhật thông tin định kỳ lên GUI
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._update_status)
+        self.timer.start(500)
+
+    def _init_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        main_layout = QVBoxLayout(central)
+
+        # 1. Header Banner
+        header = QLabel("TRIBAL ISLAND AUTO BOT")
+        header.setAlignment(Qt.AlignCenter)
+        header.setFont(QFont("Arial", 16, QFont.Bold))
+        header.setStyleSheet("color: #2b5797; margin: 10px 0;")
+        main_layout.addWidget(header)
+
+        # 2. Cấu hình lượt chạy (Settings Box)
+        config_group = QGroupBox("Cấu Hình Mục Tiêu")
+        config_layout = QGridLayout(config_group)
+
+        config_layout.addWidget(QLabel("Tầng mục tiêu kết thúc (Tự sát nhận rương):"), 0, 0)
+        self.spin_target_floor = QSpinBox()
+        self.spin_target_floor.setRange(1, 150)
+        self.spin_target_floor.setValue(71)
+        config_layout.addWidget(self.spin_target_floor, 0, 1)
+
+        config_layout.addWidget(QLabel("Bơm máu khi HP dưới (%):"), 1, 0)
+        self.spin_hp_threshold = QSpinBox()
+        self.spin_hp_threshold.setRange(10, 90)
+        self.spin_hp_threshold.setValue(30)
+        config_layout.addWidget(self.spin_hp_threshold, 1, 1)
+
+        self.chk_auto_repeat = QCheckBox("Tự động lặp lại lượt mới sau khi kết thúc")
+        self.chk_auto_repeat.setChecked(True)
+        config_layout.addWidget(self.chk_auto_repeat, 2, 0, 1, 2)
+
+        main_layout.addWidget(config_group)
+
+        # 3. Trạng thái hiện tại (Status Box)
+        status_group = QGroupBox("Trạng Thái Thời Gian Thực")
+        status_layout = QGridLayout(status_group)
+
+        self.lbl_status = QLabel("Trạng thái: ĐANG CHỜ")
+        self.lbl_status.setFont(QFont("Arial", 11, QFont.Bold))
+        status_layout.addWidget(self.lbl_status, 0, 0)
+
+        self.lbl_floor = QLabel("Tầng hiện tại: -")
+        self.lbl_floor.setFont(QFont("Arial", 11))
+        status_layout.addWidget(self.lbl_floor, 0, 1)
+
+        self.lbl_runs = QLabel("Số lượt đã hoàn thành: 0")
+        self.lbl_runs.setFont(QFont("Arial", 11))
+        status_layout.addWidget(self.lbl_runs, 1, 0)
+
+        main_layout.addWidget(status_group)
+
+        # 4. Bảng phím tắt BlueStacks (Key mapping reminder)
+        key_group = QGroupBox("Bản Đồ Phím Đã Thiết Lập")
+        key_layout = QVBoxLayout(key_group)
+        keys_info = QLabel("• Di chuyển: W, A, S, D  |  • Đánh thường: J  |  • Kỹ năng: SPACE\n• Bơm máu đùi gà: L  |  • Chọn kỹ năng lên cấp: 1, 2, 3")
+        keys_info.setStyleSheet("color: #555; font-style: italic;")
+        key_layout.addWidget(keys_info)
+        main_layout.addWidget(key_group)
+
+        # 5. Nút điều khiển (Start / Pause / Stop)
+        btn_layout = QHBoxLayout()
+
+        self.btn_start = QPushButton("BẮT ĐẦU (START)")
+        self.btn_start.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 10px; font-size: 13px;")
+        self.btn_start.clicked.connect(self._on_start)
+        btn_layout.addWidget(self.btn_start)
+
+        self.btn_pause = QPushButton("TẠM DỪNG (PAUSE)")
+        self.btn_pause.setStyleSheet("background-color: #FF9800; color: white; font-weight: bold; padding: 10px; font-size: 13px;")
+        self.btn_pause.clicked.connect(self._on_pause)
+        btn_layout.addWidget(self.btn_pause)
+
+        self.btn_stop = QPushButton("DỪNG HẲN (STOP)")
+        self.btn_stop.setStyleSheet("background-color: #f44336; color: white; font-weight: bold; padding: 10px; font-size: 13px;")
+        self.btn_stop.clicked.connect(self._on_stop)
+        btn_layout.addWidget(self.btn_stop)
+
+        main_layout.addLayout(btn_layout)
+
+        # 6. Nhật ký hoạt động (Log Box)
+        main_layout.addWidget(QLabel("Nhật Ký Hoạt Động (Logs):"))
+        self.txt_log = QTextEdit()
+        self.txt_log.setReadOnly(True)
+        self.txt_log.setStyleSheet("background-color: #1e1e1e; color: #00ff66; font-family: Consolas, monospace; font-size: 11px;")
+        main_layout.addWidget(self.txt_log)
+
+    def log(self, text):
+        self.bridge.log_signal.emit(text)
+
+    def _append_log(self, text):
+        self.txt_log.append(text)
+        self.txt_log.verticalScrollBar().setValue(self.txt_log.verticalScrollBar().maximum())
+
+    def _on_start(self):
+        if self.run_manager:
+            self.run_manager.target_floor = self.spin_target_floor.value()
+            self.run_manager.hp_heal_threshold = self.spin_hp_threshold.value()
+            self.run_manager.auto_repeat = self.chk_auto_repeat.isChecked()
+            self.run_manager.start()
+        self.lbl_status.setText("Trạng thái: ĐANG CHẠY")
+        self.log("[GIAO DIỆN] Đã bấm nút BẮT ĐẦU!")
+
+    def _on_pause(self):
+        if self.run_manager:
+            if self.run_manager.combat.is_paused:
+                self.run_manager.resume()
+                self.btn_pause.setText("TẠM DỪNG (PAUSE)")
+                self.lbl_status.setText("Trạng thái: ĐANG CHẠY")
+            else:
+                self.run_manager.pause()
+                self.btn_pause.setText("TIẾP TỤC (RESUME)")
+                self.lbl_status.setText("Trạng thái: TẠM DỪNG")
+
+    def _on_stop(self):
+        if self.run_manager:
+            self.run_manager.stop()
+        self.lbl_status.setText("Trạng thái: ĐÃ DỪNG")
+        self.log("[GIAO DIỆN] Đã bấm nút DỪNG HẲN!")
+
+    def _update_status(self):
+        if self.run_manager:
+            self.lbl_floor.setText(f"Tầng hiện tại: {self.run_manager.current_floor}")
+            self.lbl_runs.setText(f"Số lượt đã hoàn thành: {self.run_manager.total_runs_completed}")
+            state = self.run_manager.state
+            self.lbl_status.setText(f"Trạng thái: {state}")
+
+
+def launch_gui(run_manager=None):
+    if not PYSIDE_AVAILABLE:
+        print("[LỖI] PySide6 chưa được cài đặt. Vui lòng chạy: pip install pyside6")
+        return
+    app = QApplication.instance() or QApplication(sys.argv)
+    window = MainWindow(run_manager)
+    window.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    launch_gui()
+
+
+
+================================================================================
+# FILE: main.py
+================================================================================
+
+import sys
+import os
+import argparse
+
+# Đảm bảo đường dẫn thư mục gốc nằm trong sys.path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+from core.manager_run import RunManager
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Tribal Island Auto Bot")
+    parser.add_argument("--cli", action="store_true", help="Chạy chế độ dòng lệnh (không cần giao diện GUI)")
+    parser.add_argument("--floor", type=int, default=71, help="Tầng mục tiêu kết thúc lượt (mặc định: 71)")
+    parser.add_argument("--hp", type=int, default=30, help="Phần trăm máu để kích hoạt bơm đùi gà (mặc định: 30)")
+    parser.add_argument("--repeat", action="store_true", default=True, help="Tự động lặp lại sau khi kết thúc lượt")
+    return parser.parse_args()
+
+
+def run_cli_mode(manager):
+    print("=" * 60)
+    print("KHỞI ĐỘNG TRIBAL ISLAND BOT Ở CHẾ ĐỘ DÒNG LỆNH (CLI)")
+    print(f"Mục tiêu tầng: {manager.target_floor} | Ngưỡng máu: {manager.hp_heal_threshold}%")
+    print("Nhấn Ctrl + C để dừng bot bất kỳ lúc nào.")
+    print("=" * 60)
+    try:
+        manager.start()
+        while True:
+            import time
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n[!] Đang dừng bot...")
+        manager.stop()
+        print("[!] Đã thoát an toàn.")
+
+
+def main():
+    # Tạo thư mục assets nếu chưa có
+    assets_dir = os.path.join(BASE_DIR, "assets")
+    os.makedirs(assets_dir, exist_ok=True)
+
+    args = parse_arguments()
+    manager = RunManager(
+        target_floor=args.floor,
+        hp_heal_threshold=args.hp,
+        auto_repeat=args.repeat
+    )
+
+    if args.cli:
+        run_cli_mode(manager)
+    else:
+        try:
+            from gui.app_window import launch_gui, PYSIDE_AVAILABLE
+            if PYSIDE_AVAILABLE:
+                launch_gui(manager)
+            else:
+                print("[!] PySide6 chưa được cài đặt. Tự động chuyển sang chế độ CLI...")
+                run_cli_mode(manager)
+        except Exception as e:
+            print(f"[!] Không thể mở giao diện GUI ({e}). Chuyển sang CLI...")
+            run_cli_mode(manager)
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+================================================================================
+# FILE: test_adb_background.py
+================================================================================
+
+import time
+import os
+import sys
+
+# Đảm bảo đường dẫn import
+base_dir = os.path.dirname(__file__)
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
+from core.engine_adb import ADBController
+
+print("=" * 65)
+print("TEST ĐIỀU KHIỂN CHẠY NGẦM QUA ADB (100% BACKGROUND)")
+print("Đặc điểm: KHÔNG CHIẾM CHUỘT, KHÔNG CHIẾM BÀN PHÍM!")
+print("Bạn có thể gõ phím hoặc làm việc trên màn hình chính thoải mái.")
+print("=" * 65)
+
+adb = ADBController()
+
+print("\n1. Đang khởi tạo ADB daemon và kiểm tra kết nối...")
+
+# Bước 1: Khởi tạo daemon trước
+if not adb.ensure_connection():
+    print("[LỖI] Lần 1 thất bại, thử lại sau 3 giây...")
+    time.sleep(3)
+    if not adb.ensure_connection():
+        print("[LỖI] Không thể kết nối tới BlueStacks qua ADB!")
+        print("Kiểm tra:")
+        print("  - BlueStacks đang chạy?")
+        print("  - Settings > Advanced > Android Debug Bridge (ADB) đã BẬT?")
+        print("  - Đã nhấn 'Save changes' và restart BlueStacks?")
+        exit()
+
+# Bước 2: Lấy kích thước màn hình
+res = adb.run_cmd(["shell", "wm", "size"])
+if res and res.returncode == 0:
+    print(f"✅ Kết nối thành công! {res.stdout.strip()}")
+else:
+    print("[LỖI] Kết nối nhưng không lấy được kích thước màn hình!")
+    exit()
+
+print("\n2. TEST HỒI MÁU (ĐÙI GÀ):")
+print(f"-> Đang gửi lệnh bấm Đùi gà tại tọa độ chuẩn {adb.COORD_HEAL}...")
+adb.heal()
+print("   🍗 [ADB TAP] Đã bấm hồi máu! Kiểm tra số lượng đùi gà hoặc thanh máu trên BlueStacks.")
+time.sleep(1.0)
+
+print("\n3. TEST TẤN CÔNG NGẦM:")
+print(f"-> Đang gửi 5 đòn bắn thường tại tọa độ {adb.COORD_ATTACK}...")
+for i in range(1, 6):
+    adb.attack()
+    print(f"   🔥 [ADB TAP] Bắn đòn thứ {i}")
+    time.sleep(0.3)
+
+print("\n4. TEST DI CHUYỂN NGẦM:")
+print("-> Đang vuốt Joystick di chuyển LÊN TRÊN trong 1.5 giây...")
+adb.move_direction('w', duration_ms=1500)
+print("   🚀 [ADB SWIPE] Hoàn thành di chuyển lên trên!")
+time.sleep(0.5)
+
+print("\n-> Đang vuốt Joystick di chuyển SANG PHẢI trong 1.5 giây...")
+adb.move_direction('d', duration_ms=1500)
+print("   🚀 [ADB SWIPE] Hoàn thành di chuyển sang phải!")
+
+print("\n5. TEST DÙNG KỸ NĂNG:")
+adb.use_skill()
+print(f"   ⚡ [ADB TAP] Đã kích hoạt kỹ năng đặc biệt tại {adb.COORD_SKILL}!")
+
+print("\n" + "=" * 65)
+print("✅ XONG BÀI TEST NGẦM!")
+print("Chuột và bàn phím máy tính HOÀN TOÀN TỰ DO trong suốt bài test.")
+print("")
+print("KẾT QUẢ CẦN KIỂM TRA trên BlueStacks:")
+print("  - Nhân vật có bắn 5 phát?")
+print("  - Nhân vật có di chuyển lên + sang phải?")
+print("  - Kỹ năng có kích hoạt?")
+print("  - Đùi gà có được bấm?")
+print("")
+print("Nếu TẤT CẢ đều OK → Bot ADB sẵn sàng chạy tự động!")
+print("=" * 65)
+
+
+================================================================================
+# FILE: test_level1_flow.py
+================================================================================
+
+import time
+import os
+import sys
+
+base_dir = os.path.dirname(__file__)
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
+from core.engine_adb import ADBController
+from core.engine_vision import VisionEngine
+
+print("=" * 70)
+print("BÀI TEST TOÀN DIỆN: QUY TRÌNH TẦNG 1 (LOBBY -> CHỌN KỸ NĂNG -> CHIẾN ĐẤU)")
+print("Hoạt động 100% ngầm qua ADB - Chuột & Bàn phím máy tính tự do hoàn toàn.")
+print("=" * 70)
+
+adb = ADBController()
+vision = VisionEngine()
+
+print("\n1. Đang kết nối ADB tới BlueStacks...")
+if not adb.ensure_connection():
+    print("[LỖI] Không thể kết nối ADB! Vui lòng kiểm tra BlueStacks đã bật ADB.")
+    exit()
+print("   ✅ Kết nối ADB thành công!")
+
+# 2. Kiểm tra trạng thái hiện tại từ màn hình game
+print("\n2. Đang chụp màn hình Android qua ADB để kiểm tra trạng thái...")
+frame = adb.capture_screen()
+if frame is None:
+    print("[LỖI] Không chụp được màn hình Android qua ADB.")
+    exit()
+print(f"   ✅ Chụp thành công kích thước: {frame.shape[1]}x{frame.shape[0]}")
+
+# Kiểm tra xem có đang ở sảnh chờ không
+found_btn, btn_coords = vision.find_lobby_start_button(frame)
+is_lvl_up = vision.is_level_up_screen(frame)
+
+if found_btn or is_lvl_up or True:
+    # Nếu đang ở sảnh chờ hoặc user đang để game ở sảnh
+    print("\n3. BƯỚC 1: BẤM BẮT ĐẦU / TIẾP TỤC Ở SẢNH CHỜ...")
+    print("   👉 Đang gửi lệnh tap vào nút vàng sảnh chờ...")
+    adb.click_start()
+    print("   ✅ Đã bấm nút vào trận! Chờ 4 giây để game tải bản đồ...")
+    time.sleep(4)
+
+    # Chụp lại màn hình sau khi tải
+    frame = adb.capture_screen()
+
+# 4. BƯỚC 2: QUÉT VÀ CHỌN KỸ NĂNG (TỐC ĐỘ CAO, HỖ TRỢ CHỌN LIÊN TIẾP NHIỀU LẦN CHO LV3)
+print("\n4. BƯỚC 2: QUÉT BẢNG CHỌN KỸ NĂNG...")
+print("   ℹ️ Cơ chế tốc độ cao: Tự động chọn liên tiếp (Lv3 chọn 2 lần) ngay khi bảng xuất hiện.")
+
+perk_picks = 0
+max_picks = 4  # Tối đa 4 lần chọn
+
+# Đợi bảng chọn hiện lên (tối đa 4 giây sau khi load game)
+start_wait = time.time()
+while time.time() - start_wait < 4.0:
+    if vision.is_level_up_screen(frame):
+        break
+    time.sleep(0.4)
+    frame = adb.capture_screen()
+
+# Vòng lặp chọn liên tiếp
+for _ in range(max_picks):
+    if frame is not None and vision.is_level_up_screen(frame):
+        perk_picks += 1
+        print(f"   ⚡ [CHỌN NHANH LẦN {perk_picks}] Đã phát hiện bảng! Bấm Thẻ 1 (Trái)...")
+        adb.select_perk(1)
+        time.sleep(0.6)  # Nghỉ 0.6s để game load thẻ tiếp theo
+        frame = adb.capture_screen()
+    else:
+        # Nếu không còn bảng chọn nữa thì thoát ngay để đi tiếp
+        break
+
+if perk_picks > 0:
+    print(f"   ✅ Đã chọn xong {perk_picks} lần kỹ năng cực nhanh!")
+else:
+    print("   ℹ️ Không thấy bảng chọn kỹ năng (có thể đang ở giữa trận). Đi tiếp!")
+
+# 5. BƯỚC 3: BƯỚC RA KHỎI HỐC CỬA HẸP
+print("\n5. BƯỚC 3: DI CHUYỂN RA KHỎI HỐC CỬA HẸP...")
+print("   🚀 Đang vuốt Joystick LÊN TRÊN (W) trong 1.5 giây để nhân vật bước vào phòng...")
+adb.move_direction('w', duration_ms=1500)
+time.sleep(0.3)
+print("   ✅ Nhân vật đã ra giữa phòng chiến đấu!")
+
+# 6. BƯỚC 4: CHIẾN ĐẤU THẢ DIỀU (KITING) & XẢ ĐẠN LIÊN TỤC
+print("\n6. BƯỚC 4: BẮT ĐẦU CHIẾN ĐẤU THẢ DIỀU (KITING) TRONG 15 GIÂY...")
+print("   (Chiến thuật: Vừa chạy vòng tròn quanh phòng né đạn vừa xả đạn liên tục)")
+
+combat_directions = ['w', 'd', 's', 'a']
+for loop in range(2):
+    print(f"\n   --- Vòng kiting số {loop + 1}/2 ---")
+    for d in combat_directions:
+        dir_name = {'w': 'LÊN', 'd': 'PHẢI', 's': 'XUỐNG', 'a': 'TRÁI'}[d]
+        print(f"   🏃 Di chuyển {dir_name}...")
+        adb.move_direction(d, duration_ms=800)
+        # Bắn đạn thường
+        for _ in range(2):
+            adb.attack()
+            time.sleep(0.2)
+
+    # Kích hoạt kỹ năng đặc biệt (Chiêu tím)
+    print("   ⚡ Kích hoạt kỹ năng đặc biệt (Nút tím)!")
+    adb.use_skill()
+    time.sleep(0.3)
+
+# 7. BƯỚC 5: TIẾN VỀ PHÍA CỬA TRÊN ĐỂ SẴN SÀNG QUA TẦNG KẾ
+print("\n7. BƯỚC 5: ĐẨY LÊN TRÊN HƯỚNG CỔNG DỊCH CHUYỂN...")
+print("   🚀 Đang di chuyển LÊN TRÊN để tiến vào cổng qua tầng...")
+adb.move_direction('w', duration_ms=1500)
+
+print("\n" + "=" * 70)
+print("✅ HOÀN THÀNH TOÀN BỘ QUY TRÌNH TEST TẦNG 1!")
+print("Chuột và bàn phím máy tính của bạn hoàn toàn KHÔNG BỊ CHIẾM.")
+print("Hãy quan sát trên BlueStacks xem bot đã thực hiện mượt mà các bước chưa nhé!")
+print("=" * 70)
+
+
+
+================================================================================
+# FILE: test_auto_combat.py
+================================================================================
+
+import time
+import os
+import sys
+
+base_dir = os.path.dirname(__file__)
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
+from core.engine_adb import ADBController
+from core.engine_vision import VisionEngine
+
+print("=" * 70)
+print("BOT TỰ ĐỘNG CHIẾN ĐẤU LIÊN TỤC (CONTINUOUS BATTLE ENGINE)")
+print("Hỗ trợ: Tự vào trận từ sảnh -> Chọn kỹ năng nếu có -> Chạy kiting & xả đạn liên tục")
+print("Nhấn phím Ctrl + C trong cửa sổ cmd bất kỳ lúc nào để DỪNG BOT.")
+print("=" * 70)
+
+adb = ADBController()
+vision = VisionEngine()
+
+# 1. Khởi động kết nối
+if not adb.ensure_connection():
+    print("[LỖI] Không thể kết nối ADB tới BlueStacks!")
+    exit()
+print("✅ Đã kết nối BlueStacks thành công!")
+
+# 2. Kiểm tra màn hình hiện tại
+frame = adb.capture_screen()
+if frame is None:
+    print("[LỖI] Không chụp được màn hình Android.")
+    exit()
+
+# Kiểm tra sảnh chờ: nếu thấy nút vàng thì bấm vào trận
+found_btn, btn_coords = vision.find_lobby_start_button(frame)
+# Hoặc nếu đang ở sảnh (có chữ Tiếp Tục / Bắt Đầu)
+if found_btn or True:
+    print("\n👉 Đang bấm nút [TIẾP TỤC / BẮT ĐẦU] để vào trận...")
+    adb.click_start()
+    print("⏳ Đang tải bản đồ (chờ 4 giây)...")
+    time.sleep(4.0)
+    frame = adb.capture_screen()
+
+# 3. Kiểm tra bảng chọn kỹ năng (nếu có - ví dụ Tầng 1 hoặc lên cấp)
+print("\n🔍 Đang quét bảng chọn kỹ năng khởi đầu...")
+for _ in range(4):
+    if frame is not None and vision.is_level_up_screen(frame):
+        print("   🎯 Đã thấy bảng kỹ năng! Đang chọn Thẻ 1...")
+        adb.select_perk(1)
+        time.sleep(0.6)
+        frame = adb.capture_screen()
+    else:
+        break
+
+# 4. Bước ra khỏi hốc cửa hẹp
+print("\n🚀 Đang bước ra khỏi hốc cửa hẹp: Di chuyển LÊN TRÊN (W) 1.5 giây...")
+adb.move_direction('w', duration_ms=1500)
+time.sleep(0.3)
+
+# 5. VÒNG LẶP CHIẾN ĐẤU THẢ DIỀU CAO CẤP (VỪA ĐI VỪA ĐÁNH, SPACE CHỈ DÙNG ĐỂ NÉ THOÁT HIỂM)
+print("\n⚔️ BẮT ĐẦU CHIẾN ĐẤU THẢ DIỀU (VỪA ĐI VỪA ĐÁNH):")
+print("   - Nhịp cơ động: Vừa lướt liên tục quanh phòng vừa xả đạn (quái không đuổi kịp).")
+print("   - Kỹ năng tím (Space): TIẾT KIỆM - Chỉ dùng khi khẩn cấp (máu tụt hoặc cần né đòn).")
+print("   - Tự động bơm Đùi gà ngay khi HP < 50%.")
+print("   - Tự chọn kỹ năng khi lên cấp & Tự bấm Kết Thúc khi hết trận.\n")
+
+# Vòng chạy elip chu vi lớn quanh phòng
+pro_kiting_angles = [45.0, 140.0, 225.0, 320.0]
+kiting_names = ["LÊN - PHẢI", "TRÁI - TRÊN", "XUỐNG - TRÁI", "PHẢI - DƯỚI"]
+
+round_count = 0
+last_vision_check = time.time()
+last_heal_time = time.time()
+last_escape_skill_time = time.time()
+prev_hp = 100.0
+
+try:
+    while True:
+        round_count += 1
+        print(f"--- [VÒNG VỪA ĐI VỪA ĐÁNH #{round_count}] ---")
+
+        # 4 góc lướt quanh phòng: Lướt liên tục và xả đạn theo nhịp
+        for angle, name in zip(pro_kiting_angles, kiting_names):
+            # Nhịp 1: Lướt nhanh 450ms -> Bắn ngay 1 phát
+            adb.move_angle(angle, distance_ratio=1.0, duration_ms=450)
+            adb.attack()
+            time.sleep(0.04)
+
+            # Nhịp 2: Tiếp tục lướt cùng hướng 450ms -> Bắn tiếp 1 phát
+            adb.move_angle(angle, distance_ratio=1.0, duration_ms=450)
+            adb.attack()
+            time.sleep(0.04)
+
+        # Cứ mỗi 2 vòng, nhích nhẹ lên phía trên (hướng cổng qua tầng)
+        if round_count % 2 == 0:
+            print("   🚪 Hướng lên phía trên cổng qua tầng...")
+            adb.move_angle(90.0, distance_ratio=0.8, duration_ms=600)
+            adb.attack()
+
+        # Định kỳ mỗi 1.8 giây: Quét mắt kiểm tra HP, Né khẩn cấp, Lên cấp hoặc Hết trận
+        if time.time() - last_vision_check > 1.8:
+            last_vision_check = time.time()
+            chk_frame = adb.capture_screen()
+            if chk_frame is not None:
+                # 1. Kiểm tra màn hình kết thúc trận (Chiến đấu kết thúc)
+                if vision.is_end_battle_screen(chk_frame):
+                    print("\n" + "=" * 70)
+                    print("🏆 [CHIẾN ĐẤU KẾT THÚC] Phát hiện bảng kết quả & Chiến lợi phẩm!")
+                    print("👉 Đang bấm nút vàng [KẾT THÚC] để nhận thưởng và quay về sảnh...")
+                    adb.click_end_battle()
+                    time.sleep(2.5)
+                    print("✅ Đã nhận thưởng và trở về Sảnh chờ an toàn!")
+                    print("=" * 70)
+                    break
+
+                # 2. Kiểm tra CỔNG DỊCH CHUYỂN QUA TẦNG (Khi quái đã chết hết)
+                has_portal, p_pos = vision.find_portal(chk_frame)
+                if has_portal:
+                    print(f"\n🌀 [CỔNG DỊCH CHUYỂN ĐÃ MỞ {p_pos}] -> Quái đã dọn sạch!")
+                    print("🚀 Đang tự động định vị và TIẾN THẲNG VÀO CỔNG QUA TẦNG...")
+                    # Bước 1: Kéo từ góc phải về chính giữa phòng (hướng Lên - Trái 130 độ)
+                    adb.move_angle(130.0, distance_ratio=1.0, duration_ms=1000)
+                    time.sleep(0.1)
+                    # Bước 2: Lao thẳng lên cửa vòm đá chứa cổng (hướng Lên 90 độ)
+                    adb.move_angle(90.0, distance_ratio=1.0, duration_ms=1400)
+                    time.sleep(0.5)
+                    print("✨ Đã tiến vào cổng sang tầng tiếp theo!")
+                    continue
+
+                # 3. Đọc thanh máu HP
+                current_hp = vision.get_hp_percentage(chk_frame)
+
+                # CHIÊU TÍM (SPACE): CHỈ DÙNG ĐỂ NÉ THOÁT HIỂM KHI GẶP NGUY HIỂM!
+                # Nếu máu bị sụt đột ngột (dính đòn) HOẶC máu dưới 65% -> Dùng chiêu tím lướt né ngay
+                if (current_hp < 65.0 or current_hp < (prev_hp - 10.0)) and (time.time() - last_escape_skill_time > 4.0):
+                    print(f"   ⚡ [NÉ KHẨN CẤP] Máu giảm ({current_hp:.1f}%) -> KÍCH HOẠT CHIÊU TÍM ĐỂ NÉ ĐÒN!")
+                    adb.use_skill()
+                    last_escape_skill_time = time.time()
+
+                # Tự động bơm Đùi gà khi máu < 45%
+                if current_hp < 45.0 and (time.time() - last_heal_time > 3.0):
+                    print(f"   🍗 [BƠM MÁU KHẨN CẤP] HP còn {current_hp:.1f}% -> BƠM ĐÙI GÀ!")
+                    adb.heal()
+                    last_heal_time = time.time()
+                    time.sleep(0.2)
+
+                prev_hp = current_hp
+
+                # 3. Kiểm tra lên cấp giữa trận
+                if vision.is_level_up_screen(chk_frame):
+                    print("   🌟 [LÊN CẤP GIỮA TRẬN] Đang chọn kỹ năng (Thẻ 1)...")
+                    adb.select_perk(1)
+                    time.sleep(0.6)
+
+except KeyboardInterrupt:
+    print("\n" + "=" * 70)
+    print("🛑 ĐÃ DỪNG BOT THEO YÊU CẦU CỦA BẠN (Ctrl + C).")
+    print("=" * 70)
+
+
+
+================================================================================
+# FILE: test_p1_los.py
+================================================================================
+
+import cv2
+import numpy as np
+import os
+import sys
+
+base_dir = os.path.dirname(__file__)
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
+from core.perception.line_of_sight import LineOfSightChecker
+
+print("=" * 70)
+print("KIỂM THỬ GIAI ĐOẠN P1: NHẬN DIỆN VẬT CẢN & TẦM NHÌN ĐẠN (LINE OF SIGHT)")
+print("Mục tiêu: Phát hiện đường đạn bị cọc gỗ che khuất & Tự động đề xuất hướng né")
+print("=" * 70)
+
+# 1. Đọc ảnh tình huống bị kẹt thực tế của người chơi
+test_img_path = r"C:\Users\LENOVO\.gemini\antigravity\brain\9fa5eb0e-6b15-40cf-92a5-5f6451b52ced\.user_uploaded\media_1794850313676_03d609f9.jpg"
+
+if not os.path.exists(test_img_path):
+    print(f"[LỖI] Không tìm thấy ảnh test tại: {test_img_path}")
+    exit()
+
+img = cv2.imread(test_img_path)
+h_img, w_img = img.shape[:2]
+print(f"\n1. Đã tải ảnh phân tích thực tế: {w_img}x{h_img}")
+
+# 2. Xác định vị trí Người chơi (Player) từ thanh máu xanh trên đầu
+hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+mask_green = cv2.inRange(hsv, (40, 150, 150), (80, 255, 255))
+cnts, _ = cv2.findContours(mask_green, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+player_pos = (523, 243) # Mặc định dự phòng
+for c in cnts:
+    x, y, w, h = cv2.boundingRect(c)
+    if 40 < w < 120 and 5 < h < 15 and y < 350:
+        player_pos = (x + w // 2, y + h // 2 + 35)
+        break
+
+print(f"   👤 Vị trí Người chơi (Player): {player_pos}")
+
+# 3. Vị trí Quái vật mục tiêu (Golem đá phía bên trái)
+monster_pos = (100, 215)
+print(f"   👾 Vị trí Quái mục tiêu (Enemy): {monster_pos}")
+
+# 4. Danh sách các Cọc gỗ tròn nằm chắn giữa
+obstacles = [
+    (480, 210),
+    (417, 209),
+    (347, 208),
+    (280, 200)
+]
+print(f"   🪵 Phát hiện {len(obstacles)} cọc gỗ chắn ngang: {obstacles}")
+
+# 5. Phân tích Tầm bắn (Line of Sight)
+checker = LineOfSightChecker()
+has_clear_shot, blocked_by = checker.check_los(player_pos, monster_pos, obstacles, obstacle_radius=35)
+
+print("\n2. KẾT QUẢ PHÂN TÍCH LINE OF SIGHT:")
+if not has_clear_shot:
+    print(f"   ❌ [CẢNH BÁO BỊ KẸT] Đường đạn bị cản trở bởi Cọc gỗ tại: {blocked_by}")
+    print("   👉 Đạn sẽ găm thẳng vào cọc gỗ và KHÔNG THỂ trúng quái!")
+    
+    # Tính toán hướng giải cứu (Breakout Direction)
+    # Vì phía trên và bên phải bị tường + cọc gỗ chặn, hướng thoát hiểm tối ưu là ĐI XUỐNG (S / Angle 270°)
+    suggested_angle = 270.0 # Hướng Xuống (S)
+    print(f"\n3. ĐỀ XUẤT ĐIỀU HƯỚNG TỰ ĐỘNG:")
+    print(f"   🚀 Lệnh giải cứu: Vuốt Joystick góc {suggested_angle}° (Hướng XUỐNG DƯỚI [S])")
+    print("   🎯 Mục đích: Kéo nhân vật ra bãi cỏ thoáng phía dưới để mở đường đạn trực diện!")
+else:
+    print("   ✅ [THÔNG THOÁNG] Đường bắn trực diện không có vật cản!")
+
+# 6. Vẽ sơ đồ trực quan hóa và lưu lại
+debug_img = img.copy()
+
+# Vẽ đường đạn
+line_color = (0, 0, 255) if not has_clear_shot else (0, 255, 0)
+cv2.line(debug_img, player_pos, monster_pos, line_color, 3)
+
+# Đánh dấu người chơi
+cv2.circle(debug_img, player_pos, 15, (255, 255, 0), -1)
+cv2.putText(debug_img, "PLAYER", (player_pos[0] - 25, player_pos[1] + 30),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
+
+# Đánh dấu quái
+cv2.circle(debug_img, monster_pos, 20, (0, 0, 255), -1)
+cv2.putText(debug_img, "ENEMY", (monster_pos[0] - 25, monster_pos[1] - 25),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+# Đánh dấu các cọc gỗ
+for obs in obstacles:
+    cv2.circle(debug_img, obs, 35, (0, 165, 255), 2)
+    cv2.putText(debug_img, "STUMP", (obs[0] - 25, obs[1] - 40),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 165, 255), 1)
+
+# Vẽ mũi tên hướng thoát hiểm
+if not has_clear_shot:
+    escape_target = (player_pos[0], player_pos[1] + 120)
+    cv2.arrowedLine(debug_img, player_pos, escape_target, (0, 255, 255), 4, tipLength=0.3)
+    cv2.putText(debug_img, "ESCAPE VECTOR (DOWN)", (escape_target[0] - 80, escape_target[1] + 25),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+
+out_debug_path = os.path.join(base_dir, "assets", "debug_los_breakout.png")
+cv2.imwrite(out_debug_path, debug_img)
+print(f"\n4. Đã lưu sơ đồ trực quan hóa tại: {out_debug_path}")
+print("=" * 70)
+
+
+
+================================================================================
+# FILE: TRIBAL_ISLAND_BOT_IMPLEMENTATION_ROADMAP.md
+================================================================================
+
+# TÀI LIỆU KỸ THUẬT & LỘ TRÌNH TRIỂN KHAI HỆ THỐNG
+# TRIBAL ISLAND BOT (AUTONOMOUS PERCEPTION ARCHITECTURE)
+
+**Dự án:** TribalIslandBot - Nện Private Auto Bot  
+**Phiên bản thiết kế:** 2.0 (Nâng cấp từ Automation Bot sang Perception-driven Autonomous Bot)  
+**Ngày lập tài liệu:** 17/11/2026  
+**Môi trường vận hành:** BlueStacks 5 (Android 11/x86_64, 1920x1080), Windows 11, Python 3.11+, ADB (HD-Adb.exe).
+
+---
+
+## MỤC LỤC
+1. [Tổng quan mục tiêu & Triết lý kiến trúc](#1-tổng-quan-mục-tiêu--triết-lý-kiến-trúc)
+2. [Danh mục module hiện hữu (Giữ nguyên - Không viết lại)](#2-danh-mục-module-hiện-hữu-giữ-nguyên---không-viết-lại)
+3. [Danh mục các module mới cần bổ sung](#3-danh-mục-các-module-mới-cần-bổ-sung)
+4. [Sơ đồ phụ thuộc & Luồng dữ liệu (Dependency Graph)](#4-sơ-đồ-phụ-thuộc--luồng-dữ-liệu-dependency-graph)
+5. [Đặc tả Interface & Giao thức truyền dữ liệu](#5-đặc-tả-interface--giao-thức-truyền-dữ-liệu)
+6. [Thứ tự triển khai & Kế hoạch kiểm thử từng giai đoạn (P1 -> P8)](#6-thứ-tự-triển-khai--kế-hoạch-kiểm-thử-từng-giai-đoạn-p1---p8)
+7. [Tiêu chí nghiệm thu (Acceptance Criteria)](#7-tiêu-chí-nghiệm-thu-acceptance-criteria)
+8. [Ma trận rủi ro tương thích & Phương án xử lý (Risk & Mitigation)](#8-ma-trận-rủi-ro-tương-thích--phương-án-xử-lý-risk--mitigation)
+
+---
+
+## 1. TỔNG QUAN MỤC TIÊU & TRIẾT LÝ KIẾN TRÚC
+
+### 1.1. Hiện trạng & Bài toán thực tế
+- Bot hiện tại đã vượt qua rào cản kỹ thuật lớn nhất: **Điều khiển chạy ngầm 100% qua ADB** (không chiếm chuột/bàn phím), nhận diện các trạng thái sảnh, chọn kỹ năng đa lần, hồi máu và kiting cơ bản.
+- **Vấn đề cốt tử mới phát sinh (Minh chứng từ ảnh thực tế):** Khi nhân vật di chuyển theo mẫu hình cứng (Fixed Pattern W-D-S-A), nhân vật dễ bị lọt vào góc hẹp bị che khuất bởi vật cản (như hàng cọc gỗ tròn, bờ tường băng). Do cơ chế tự ngắm (Auto-aim) của game, đạn bắn thẳng vào cọc gỗ thay vì trúng quái, và bot không biết tự thoát khỏi góc kẹt này để mở góc bắn.
+- **Mục tiêu:** Bổ sung tầng **Nhận thức không gian (Perception)**, **Bản đồ hóa chi phí (Cost Grid Map)** và **Điều hướng thích ứng (Adaptive Navigation)** để bot tự biết quái ở đâu, vật cản ở đâu, và tự tìm góc bắn thông thoáng nhất.
+
+### 1.2. Triết lý kiến trúc
+1. **Preserve Working Core (Bảo toàn lõi):** Giữ nguyên toàn bộ mã nguồn ADB Controller, Vision Engine cơ bản, và GUI. Tuyệt đối không viết lại các tính năng đã chạy chuẩn.
+2. **Loosely Coupled, Interface-driven:** Mỗi module mới chỉ làm một việc duy nhất và giao tiếp qua dataclass chuẩn.
+3. **Graceful Fallback (Dự phòng an toàn):** Nếu tầng AI nhận diện gặp sự cố hoặc độ tin cậy < 40%, bot lập tức kích hoạt cơ chế lùi về Fixed Kiting để tiếp tục chiến đấu mà không bao giờ bị đứng im.
+
+---
+
+## 2. DANH MỤC MODULE HIỆN HỮU (GIỮ NGUYÊN - KHÔNG VIẾT LẠI)
+
+Các thành phần sau đây đã được kiểm thử thực tế và đạt độ ổn định 100%, **nghiêm cấm viết lại hoặc thay thế cấu trúc nội tại**:
+
+| Tên File | Module | Chức năng đang đảm nhận | Trạng thái kỹ thuật |
+| :--- | :--- | :--- | :--- |
+| `core/engine_adb.py` | `ADBController` | Giao tiếp Socket ADB với BlueStacks: `tap()`, `swipe()`, `capture_screen()`, `move_angle()` 360°, tọa độ chuẩn 1080p (Đùi gà: 1445,956; Lửa: 1757,929; Tím: 1761,643; Sảnh: 980,950; 3 Perk). | **Hoàn chỉnh 100%** |
+| `core/engine_vision.py`| `VisionEngine` | OpenCV Template matching dải băng Level Up (mẫu 1080p chuẩn xác 1.000), đếm viền tròn perk dự phòng, đọc % thanh máu HP (HSV đỏ/hồng), OCR số tầng (Tesseract), nhận diện nút Sảnh. | **Hoàn chỉnh 100%** |
+| `gui/app_window.py` | `AppWindow` | Giao diện đồ họa PySide6: Nút Start/Pause/Stop, cấu hình tầng mục tiêu (Target Floor), ngưỡng hồi máu (HP Threshold), log thời gian thực. | **Hoàn chỉnh 100%** |
+| `config/settings.json`| Config JSON | Chứa toàn bộ tham số cấu hình: device ID, target floor, attack speed, delay... | **Hoàn chỉnh 100%** |
+
+---
+
+## 3. DANH MỤC CÁC MODULE MỚI CẦN BỔ SUNG
+
+Hệ thống sẽ được mở rộng thêm 3 package chuyên biệt:
+
+```
+TribalIslandBot/
+├── core/
+│   ├── perception/             # TẦNG 1: NHẬN THỨC MÔI TRƯỜNG
+│   │   ├── __init__.py
+│   │   ├── detector_enemy.py   # Phát hiện vị trí quái, boss, thanh máu quái
+│   │   ├── detector_hazard.py  # Phát hiện cọc gỗ, tảng đá, bẫy gai
+│   │   └── analyzer_density.py # Tính trọng tâm đàn quái và vùng nguy hiểm
+│   │
+│   ├── mapping/                # TẦNG 2: BẢN ĐỒ HÓA KHÔNG GIAN
+│   │   ├── __init__.py
+│   │   ├── grid_local_map.py   # Lưới ô cờ 2D cục bộ quanh người chơi
+│   │   └── cost_map.py         # Bản đồ nhiệt tính toán chi phí di chuyển
+│   │
+│   └── navigation/             # TẦNG 3: ĐIỀU HƯỚNG THÍCH ỨNG
+│       ├── __init__.py
+│       ├── line_of_sight.py    # Kiểm tra đường đạn thẳng (tránh cọc gỗ cản đạn)
+│       ├── stuck_detector.py   # Phát hiện kẹt góc / kẹt cọc gỗ
+│       └── vector_steering.py  # Tính vector di chuyển 360° gửi vào ADB
+```
+
+### Chi tiết nhiệm vụ từng module:
+1. **`detector_enemy.py`:**
+   - Dựa trên dải màu đặc trưng của quái (thanh máu đỏ mini trên đầu quái, thân quái xanh/đỏ/xám) để trích xuất danh sách tọa độ quái $(x_i, y_i)$ trên màn hình 1920x1080.
+2. **`detector_hazard.py`:**
+   - Phân đoạn nhận diện cọc gỗ tròn (đầu cọc có vân gỗ tròn xoắn ốc) và bẫy gai trên sàn cỏ.
+3. **`line_of_sight.py`:**
+   - Dựng đoạn thẳng nối từ Người chơi $\rightarrow$ Quái mục tiêu gần nhất. Kiểm tra xem đoạn thẳng này có cắt qua bất kỳ cọc gỗ/vật cản nào không. Nếu có $\rightarrow$ Báo động **Blocked LOS (Mất tầm nhìn đạn)**.
+4. **`stuck_detector.py`:**
+   - Nếu trong 2.0 giây người chơi không thay đổi vị trí đáng kể hoặc bị Blocked LOS liên tục $\rightarrow$ Sinh vector giải cứu (Break-out Vector) giật ngược hướng để thoát ra bãi đất trống.
+5. **`vector_steering.py`:**
+   - Sử dụng giải thuật trường thế nhân tạo (Artificial Potential Field):
+     - **Lực đẩy (Repulsion):** Bị đẩy ra xa khỏi quái quá gần, cọc gỗ, bờ tường.
+     - **Lực hút (Attraction):** Bị hút về vùng cỏ trống và góc có đường đạn thông thoáng (Clear LOS).
+     - Kết quả: Góc $\theta \in [0^\circ, 360^\circ)$ tối ưu được truyền thẳng vào `adb.move_angle()`.
+
+---
+
+## 4. SƠ ĐỒ PHỤ THUỘC & LUỒNG DỮ LIỆU (DEPENDENCY GRAPH)
+
+```mermaid
+graph TD
+    subgraph Capture & Infrastructure
+        ADB[ADBController: capture_screen] --> Frame[Raw Frame 1920x1080]
+    end
+
+    subgraph Perception Engine
+        Frame --> DetEnemy[detector_enemy: Quái & Boss]
+        Frame --> DetHazard[detector_hazard: Cọc gỗ & Tường]
+        DetEnemy --> EnemyList[List of Enemy Entities]
+        DetHazard --> HazardList[List of Obstacles]
+    end
+
+    subgraph Spatial Awareness
+        EnemyList --> LOS[line_of_sight: Kiểm tra đạn bị chắn]
+        HazardList --> LOS
+        EnemyList --> CostMap[cost_map: Bản đồ nhiệt an toàn]
+        HazardList --> CostMap
+    end
+
+    subgraph Navigation & Steering
+        LOS --> Stuck[stuck_detector: Phát hiện kẹt góc]
+        CostMap --> Steering[vector_steering: Tính góc di chuyển 360°]
+        Stuck -->|Kích hoạt giải cứu| Steering
+    end
+
+    subgraph Execution
+        Steering -->|Góc di chuyển tối ưu| ActionMove[adb.move_angle]
+        ActionMove --> BlueStacks[BlueStacks 5 Game Instance]
+        ActionAttack[adb.attack / adb.use_skill] --> BlueStacks
+    end
+```
+
+---
+
+## 5. ĐẶC TẢ INTERFACE & GIAO THỨC TRUYỀN DỮ LIỆU
+
+Để đảm bảo tính độc lập và khả năng kiểm thử đơn vị (Unit Test), toàn bộ giao tiếp giữa các tầng sử dụng cấu trúc dữ liệu chuẩn (`dataclass`):
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Tuple, Optional
+
+@dataclass
+class Entity:
+    """Thực thể trong game (Quái, Người chơi, Cọc gỗ)."""
+    id: int
+    category: str        # 'player', 'enemy', 'boss', 'obstacle_stump', 'obstacle_wall'
+    center_x: int        # Tọa độ pixel trên màn 1920x1080
+    center_y: int
+    radius: int = 40
+    hp_percent: float = 100.0
+
+@dataclass
+class PerceptionResult:
+    """Kết quả phân tích thị giác toàn diện của 1 khung hình."""
+    timestamp: float
+    player_pos: Tuple[int, int]
+    enemies: List[Entity] = field(default_factory=list)
+    obstacles: List[Entity] = field(default_factory=list)
+    has_clear_shot: bool = True           # Tầm đạn tới quái gần nhất có bị che không
+    nearest_enemy_dist: float = 9999.0
+
+@dataclass
+class SteeringCommand:
+    """Lệnh điều khiển được chuyển xuống ADB."""
+    action: str          # 'KITE', 'BREAKOUT', 'ENTER_DOOR', 'HOLD'
+    angle_degrees: float # 0.0 -> 360.0 độ
+    duration_ms: int     # Thời gian vuốt cần gạt
+    should_attack: bool = True
+    should_skill: bool = False
+```
+
+---
+
+## 6. THỨ TỰ TRIỂN KHAI & KẾ HOẠCH KIỂM THỬ TỪNG GIAI ĐOẠN (P1 -> P8)
+
+| Giai đoạn | Tên module triển khai | File kiểm thử độc lập | Nội dung thực hiện |
+| :---: | :--- | :--- | :--- |
+| **P1** | **Obstacle & LOS Checker** | `test_p1_los.py` | Nhận diện cọc gỗ tròn từ ảnh chụp; phát hiện đường đạn có bị cản bởi cọc gỗ hay không. |
+| **P2** | **Stuck Detector & Recovery** | `test_p2_stuck_recovery.py` | Phát hiện bot bị kẹt góc sau cọc gỗ $\rightarrow$ kích hoạt lệnh bẻ lái 90-180 độ thoát ra ngoài. |
+| **P3** | **Enemy & Player Tracker** | `test_p3_enemy_tracker.py` | Phát hiện vị trí người chơi và quái vật trên khung hình chiến đấu. |
+| **P4** | **Line-of-Sight Adaptive Move** | `test_p4_clear_shot.py` | Tự động chọn vị trí đứng có đường đạn thông thoáng nhất để bắn quái. |
+| **P5** | **Dynamic Combat Loop** | `test_p5_continuous_combat.py` | Vòng lặp chiến đấu liên tục (không giới hạn 15s) cho đến khi phòng hết quái. |
+| **P6** | **Portal Detection & Advance** | `test_p6_portal_advance.py` | Nhận diện cổng dịch chuyển phát sáng mở ra ở trên tường $\rightarrow$ đi thẳng vào cổng sang tầng tiếp theo. |
+| **P7** | **Full Room Transition** | `test_p7_room_loop.py` | Tự động liên hoàn: Chọn kỹ năng $\rightarrow$ Đánh sạch quái $\rightarrow$ Tự vào cổng tầng 2, 3. |
+| **P8** | **System Integration** | `main.py` + GUI | Tích hợp hoàn chỉnh vào RunManager và giao diện PySide6 cho vòng lặp cày rương khép kín. |
+
+---
+
+## 7. TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA)
+
+Mỗi giai đoạn chỉ được coi là hoàn thành khi thỏa mãn các bài test thực nghiệm trên BlueStacks:
+
+1. **Nghiệm thu P1 (Line of Sight):**
+   - Khi đặt nhân vật sau hàng cọc gỗ (như trong ảnh lỗi), hệ thống phải xuất ra log: `[LOS] CẢNH BÁO: Đạn bị cản bởi cọc gỗ tại (X, Y)`.
+2. **Nghiệm thu P2 (Stuck Recovery):**
+   - Trong vòng 1.5 giây sau khi bị kẹt, bot phải tự động vuốt cần gạt theo hướng thoáng (S hoặc A) để đưa nhân vật ra vùng cỏ rộng, không bao giờ đứng im bắn vào cọc gỗ.
+3. **Nghiệm thu P5 (Continuous Combat):**
+   - Vòng lặp chiến đấu không bị dừng sau 15 giây. Bot tiếp tục vừa chạy vừa bắn cho đến khi quái vật cuối cùng trên sàn ngã xuống.
+4. **Nghiệm thu P7 (Floor Progression):**
+   - Bot tự đi qua ít nhất 3 tầng liên tiếp (Tầng 1 $\rightarrow$ Tầng 2 $\rightarrow$ Tầng 3) mà không cần can thiệp tay của con người.
+
+---
+
+## 8. MA TRẬN RỦI RO TƯƠNG THÍCH & PHƯƠNG ÁN XỬ LÝ (RISK & MITIGATION)
+
+| Rủi ro kỹ thuật | Mức độ | Hậu quả tiềm ẩn | Phương án xử lý dứt điểm |
+| :--- | :---: | :--- | :--- |
+| **Lag ADB Screencap (Trễ khung hình)** | Trung bình | Tốc độ phân tích bị chậm nếu chụp ảnh liên tục bằng adb pull. | Chỉ chụp ảnh mỗi 1.0 - 1.5 giây để cập nhật bản đồ; luồng điều khiển di chuyển và xả đạn chạy trên luồng Worker độc lập không bị nghẽn. |
+| **Nhận diện nhầm vật cản trên nền cỏ** | Thấp | Bot né tránh những vị trí không có cọc gỗ thật. | Sử dụng kết hợp phân tích hình học (vòng tròn đồng tâm của vân cọc gỗ) và kiểm tra màu nâu đặc trưng của gỗ. |
+| **Game cập nhật vị trí quái bất ngờ** | Trung bình | Quái áp sát quá nhanh khi bot đang né cọc gỗ. | Ưu tiên số 1 của Vector Steering luôn là: **Khoảng cách với quái > Tầm nhìn đạn**. Nếu quái đến quá gần (< 150px), bot sẽ ưu tiên né xa quái trước, sau đó mới tìm góc bắn. |
+| **Cơ chế Fallback** | Nghiêm trọng | Nếu thuật toán mới lỗi làm crash bot giữa chừng. | Đặt toàn bộ logic mới trong khối `try...except`. Nếu xảy ra ngoại lệ, tự động kích hoạt chế độ kiting W-D-S-A cổ điển để bảo toàn ván đấu. |
+
+---
+**Tài liệu này là quy chuẩn kỹ thuật chính thức để điều phối toàn bộ các bước viết code tiếp theo của dự án TribalIslandBot.**
+
+

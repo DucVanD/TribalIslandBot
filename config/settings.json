@@ -1,0 +1,17 @@
+{
+  "target_floor": 71,
+  "hp_critical_percent": 30,
+  "attack_interval": 0.22,
+  "attack_hold_time": 0.06,
+  "change_direction_interval": 2.5,
+  "skill_use_interval": 4.0,
+  "window_title_keyword": "BlueStacks",
+  "ocr_tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+  "skill_priority": [
+    "fire_circle",
+    "dart",
+    "thunder",
+    "attack_boost",
+    "hp_boost"
+  ]
+}

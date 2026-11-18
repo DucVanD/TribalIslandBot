@@ -1,0 +1,1928 @@
+[
+  {
+    "frame_idx": 900,
+    "time_sec": 15.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 960,
+    "time_sec": 16.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 77.8
+  },
+  {
+    "frame_idx": 1020,
+    "time_sec": 17.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 62.6
+  },
+  {
+    "frame_idx": 1080,
+    "time_sec": 18.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 683.5
+  },
+  {
+    "frame_idx": 1140,
+    "time_sec": 19.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 414.4
+  },
+  {
+    "frame_idx": 1200,
+    "time_sec": 20.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 683.5
+  },
+  {
+    "frame_idx": 1260,
+    "time_sec": 21.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 1380,
+    "time_sec": 23.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 53.9
+  },
+  {
+    "frame_idx": 1440,
+    "time_sec": 24.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 455.6
+  },
+  {
+    "frame_idx": 1500,
+    "time_sec": 25.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 66.9
+  },
+  {
+    "frame_idx": 1560,
+    "time_sec": 26.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 61.8
+  },
+  {
+    "frame_idx": 1620,
+    "time_sec": 27.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 43.2
+  },
+  {
+    "frame_idx": 1680,
+    "time_sec": 28.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 1740,
+    "time_sec": 29.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 1800,
+    "time_sec": 30.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 42.2
+  },
+  {
+    "frame_idx": 1860,
+    "time_sec": 31.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 421.8
+  },
+  {
+    "frame_idx": 1920,
+    "time_sec": 32.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 75.7
+  },
+  {
+    "frame_idx": 1980,
+    "time_sec": 33.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 77.6
+  },
+  {
+    "frame_idx": 2040,
+    "time_sec": 34.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 575.4
+  },
+  {
+    "frame_idx": 2100,
+    "time_sec": 35.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 654.6
+  },
+  {
+    "frame_idx": 2340,
+    "time_sec": 39.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 772.7
+  },
+  {
+    "frame_idx": 2400,
+    "time_sec": 40.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 2460,
+    "time_sec": 41.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 50.2
+  },
+  {
+    "frame_idx": 2520,
+    "time_sec": 42.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 2580,
+    "time_sec": 43.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 2640,
+    "time_sec": 44.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 540.6
+  },
+  {
+    "frame_idx": 2700,
+    "time_sec": 45.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 2760,
+    "time_sec": 46.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 2820,
+    "time_sec": 47.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 193.7
+  },
+  {
+    "frame_idx": 2880,
+    "time_sec": 48.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 676.8
+  },
+  {
+    "frame_idx": 2940,
+    "time_sec": 49.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 3000,
+    "time_sec": 50.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 672.0
+  },
+  {
+    "frame_idx": 3060,
+    "time_sec": 51.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 3120,
+    "time_sec": 52.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 3180,
+    "time_sec": 53.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 70.0
+  },
+  {
+    "frame_idx": 3240,
+    "time_sec": 54.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 3420,
+    "time_sec": 57.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 3480,
+    "time_sec": 58.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 691.1
+  },
+  {
+    "frame_idx": 3540,
+    "time_sec": 59.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 302.1
+  },
+  {
+    "frame_idx": 3600,
+    "time_sec": 60.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 412.3
+  },
+  {
+    "frame_idx": 3660,
+    "time_sec": 61.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.6
+  },
+  {
+    "frame_idx": 3720,
+    "time_sec": 62.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 51.2
+  },
+  {
+    "frame_idx": 3780,
+    "time_sec": 63.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 80.1
+  },
+  {
+    "frame_idx": 4080,
+    "time_sec": 68.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 4140,
+    "time_sec": 69.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 4200,
+    "time_sec": 70.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 221.4
+  },
+  {
+    "frame_idx": 4260,
+    "time_sec": 71.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 195.9
+  },
+  {
+    "frame_idx": 4320,
+    "time_sec": 72.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 4380,
+    "time_sec": 73.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 4440,
+    "time_sec": 74.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.3
+  },
+  {
+    "frame_idx": 4560,
+    "time_sec": 76.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 4620,
+    "time_sec": 77.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 4680,
+    "time_sec": 78.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 420.3
+  },
+  {
+    "frame_idx": 4740,
+    "time_sec": 79.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 686.3
+  },
+  {
+    "frame_idx": 4800,
+    "time_sec": 80.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 651.2
+  },
+  {
+    "frame_idx": 4860,
+    "time_sec": 81.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 57.1
+  },
+  {
+    "frame_idx": 4920,
+    "time_sec": 82.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 4980,
+    "time_sec": 83.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 5040,
+    "time_sec": 84.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 5100,
+    "time_sec": 85.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 5220,
+    "time_sec": 87.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 5280,
+    "time_sec": 88.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 246.8
+  },
+  {
+    "frame_idx": 5340,
+    "time_sec": 89.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 266.3
+  },
+  {
+    "frame_idx": 5400,
+    "time_sec": 90.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 5460,
+    "time_sec": 91.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 249.0
+  },
+  {
+    "frame_idx": 5520,
+    "time_sec": 92.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 5580,
+    "time_sec": 93.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 5640,
+    "time_sec": 94.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.3
+  },
+  {
+    "frame_idx": 5700,
+    "time_sec": 95.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 5760,
+    "time_sec": 96.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 5820,
+    "time_sec": 97.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 68.7
+  },
+  {
+    "frame_idx": 5940,
+    "time_sec": 99.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 270.6
+  },
+  {
+    "frame_idx": 6000,
+    "time_sec": 100.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 392.2
+  },
+  {
+    "frame_idx": 6060,
+    "time_sec": 101.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 431.6
+  },
+  {
+    "frame_idx": 6120,
+    "time_sec": 102.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 426.7
+  },
+  {
+    "frame_idx": 6420,
+    "time_sec": 107.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 6480,
+    "time_sec": 108.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 686.2
+  },
+  {
+    "frame_idx": 6540,
+    "time_sec": 109.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 6600,
+    "time_sec": 110.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 673.3
+  },
+  {
+    "frame_idx": 6660,
+    "time_sec": 111.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 64.6
+  },
+  {
+    "frame_idx": 6720,
+    "time_sec": 112.0,
+    "angle_deg": 270.0,
+    "enemy_dist": 298.6
+  },
+  {
+    "frame_idx": 6780,
+    "time_sec": 113.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 247.3
+  },
+  {
+    "frame_idx": 6840,
+    "time_sec": 114.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 117.7
+  },
+  {
+    "frame_idx": 6900,
+    "time_sec": 115.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 313.1
+  },
+  {
+    "frame_idx": 6960,
+    "time_sec": 116.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 475.8
+  },
+  {
+    "frame_idx": 7020,
+    "time_sec": 117.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 754.2
+  },
+  {
+    "frame_idx": 7080,
+    "time_sec": 118.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7140,
+    "time_sec": 119.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 221.1
+  },
+  {
+    "frame_idx": 7200,
+    "time_sec": 120.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 73.6
+  },
+  {
+    "frame_idx": 7260,
+    "time_sec": 121.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 693.6
+  },
+  {
+    "frame_idx": 7320,
+    "time_sec": 122.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7440,
+    "time_sec": 124.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 664.7
+  },
+  {
+    "frame_idx": 7500,
+    "time_sec": 125.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7560,
+    "time_sec": 126.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7680,
+    "time_sec": 128.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7740,
+    "time_sec": 129.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7800,
+    "time_sec": 130.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7860,
+    "time_sec": 131.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 7920,
+    "time_sec": 132.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 406.5
+  },
+  {
+    "frame_idx": 7980,
+    "time_sec": 133.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 691.6
+  },
+  {
+    "frame_idx": 8040,
+    "time_sec": 134.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 8160,
+    "time_sec": 136.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 8220,
+    "time_sec": 137.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.3
+  },
+  {
+    "frame_idx": 8280,
+    "time_sec": 138.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 80.1
+  },
+  {
+    "frame_idx": 8400,
+    "time_sec": 140.0,
+    "angle_deg": 270.0,
+    "enemy_dist": 81.3
+  },
+  {
+    "frame_idx": 8460,
+    "time_sec": 141.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.3
+  },
+  {
+    "frame_idx": 8580,
+    "time_sec": 143.0,
+    "angle_deg": 270.0,
+    "enemy_dist": 81.3
+  },
+  {
+    "frame_idx": 8640,
+    "time_sec": 144.0,
+    "angle_deg": 270.0,
+    "enemy_dist": 81.3
+  },
+  {
+    "frame_idx": 8700,
+    "time_sec": 145.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 8760,
+    "time_sec": 146.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 8820,
+    "time_sec": 147.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 8880,
+    "time_sec": 148.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 8940,
+    "time_sec": 149.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 695.5
+  },
+  {
+    "frame_idx": 9000,
+    "time_sec": 150.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 613.7
+  },
+  {
+    "frame_idx": 9060,
+    "time_sec": 151.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 554.1
+  },
+  {
+    "frame_idx": 9120,
+    "time_sec": 152.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 119.8
+  },
+  {
+    "frame_idx": 9180,
+    "time_sec": 153.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 515.5
+  },
+  {
+    "frame_idx": 9240,
+    "time_sec": 154.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 459.5
+  },
+  {
+    "frame_idx": 9360,
+    "time_sec": 156.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 663.2
+  },
+  {
+    "frame_idx": 9600,
+    "time_sec": 160.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 9660,
+    "time_sec": 161.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 58.1
+  },
+  {
+    "frame_idx": 9720,
+    "time_sec": 162.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 664.4
+  },
+  {
+    "frame_idx": 9780,
+    "time_sec": 163.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 402.8
+  },
+  {
+    "frame_idx": 9840,
+    "time_sec": 164.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 242.1
+  },
+  {
+    "frame_idx": 9900,
+    "time_sec": 165.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 44.4
+  },
+  {
+    "frame_idx": 9960,
+    "time_sec": 166.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 351.0
+  },
+  {
+    "frame_idx": 10020,
+    "time_sec": 167.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 553.7
+  },
+  {
+    "frame_idx": 10080,
+    "time_sec": 168.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 10140,
+    "time_sec": 169.0,
+    "angle_deg": 270.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 10200,
+    "time_sec": 170.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 10260,
+    "time_sec": 171.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 70.9
+  },
+  {
+    "frame_idx": 10380,
+    "time_sec": 173.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 10560,
+    "time_sec": 176.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 10620,
+    "time_sec": 177.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 322.5
+  },
+  {
+    "frame_idx": 10680,
+    "time_sec": 178.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 669.2
+  },
+  {
+    "frame_idx": 10740,
+    "time_sec": 179.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 10800,
+    "time_sec": 180.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 375.0
+  },
+  {
+    "frame_idx": 10860,
+    "time_sec": 181.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 234.8
+  },
+  {
+    "frame_idx": 10920,
+    "time_sec": 182.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 71.0
+  },
+  {
+    "frame_idx": 10980,
+    "time_sec": 183.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 11040,
+    "time_sec": 184.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 11100,
+    "time_sec": 185.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 662.5
+  },
+  {
+    "frame_idx": 11160,
+    "time_sec": 186.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 485.3
+  },
+  {
+    "frame_idx": 11220,
+    "time_sec": 187.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 236.6
+  },
+  {
+    "frame_idx": 11400,
+    "time_sec": 190.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 661.4
+  },
+  {
+    "frame_idx": 11460,
+    "time_sec": 191.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 593.0
+  },
+  {
+    "frame_idx": 11520,
+    "time_sec": 192.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 11580,
+    "time_sec": 193.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 11640,
+    "time_sec": 194.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 11820,
+    "time_sec": 197.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 11880,
+    "time_sec": 198.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 12060,
+    "time_sec": 201.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 275.3
+  },
+  {
+    "frame_idx": 12180,
+    "time_sec": 203.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 217.3
+  },
+  {
+    "frame_idx": 12240,
+    "time_sec": 204.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 294.3
+  },
+  {
+    "frame_idx": 12300,
+    "time_sec": 205.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 312.7
+  },
+  {
+    "frame_idx": 12360,
+    "time_sec": 206.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 335.0
+  },
+  {
+    "frame_idx": 12420,
+    "time_sec": 207.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 290.6
+  },
+  {
+    "frame_idx": 12480,
+    "time_sec": 208.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 199.1
+  },
+  {
+    "frame_idx": 12540,
+    "time_sec": 209.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 208.7
+  },
+  {
+    "frame_idx": 12600,
+    "time_sec": 210.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 208.0
+  },
+  {
+    "frame_idx": 12720,
+    "time_sec": 212.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 12900,
+    "time_sec": 215.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 376.3
+  },
+  {
+    "frame_idx": 12960,
+    "time_sec": 216.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 13020,
+    "time_sec": 217.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 13080,
+    "time_sec": 218.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 224.4
+  },
+  {
+    "frame_idx": 13140,
+    "time_sec": 219.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 427.1
+  },
+  {
+    "frame_idx": 13200,
+    "time_sec": 220.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 680.1
+  },
+  {
+    "frame_idx": 13260,
+    "time_sec": 221.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 401.3
+  },
+  {
+    "frame_idx": 13320,
+    "time_sec": 222.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 642.5
+  },
+  {
+    "frame_idx": 13380,
+    "time_sec": 223.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 645.4
+  },
+  {
+    "frame_idx": 13440,
+    "time_sec": 224.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 667.5
+  },
+  {
+    "frame_idx": 13500,
+    "time_sec": 225.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 13560,
+    "time_sec": 226.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 130.0
+  },
+  {
+    "frame_idx": 13620,
+    "time_sec": 227.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 344.6
+  },
+  {
+    "frame_idx": 13680,
+    "time_sec": 228.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 421.2
+  },
+  {
+    "frame_idx": 13740,
+    "time_sec": 229.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 385.9
+  },
+  {
+    "frame_idx": 13800,
+    "time_sec": 230.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 417.0
+  },
+  {
+    "frame_idx": 13860,
+    "time_sec": 231.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 64.9
+  },
+  {
+    "frame_idx": 13920,
+    "time_sec": 232.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 370.3
+  },
+  {
+    "frame_idx": 13980,
+    "time_sec": 233.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 417.0
+  },
+  {
+    "frame_idx": 14040,
+    "time_sec": 234.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 417.0
+  },
+  {
+    "frame_idx": 14100,
+    "time_sec": 235.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14160,
+    "time_sec": 236.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14220,
+    "time_sec": 237.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14280,
+    "time_sec": 238.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14340,
+    "time_sec": 239.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 670.6
+  },
+  {
+    "frame_idx": 14400,
+    "time_sec": 240.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 814.4
+  },
+  {
+    "frame_idx": 14460,
+    "time_sec": 241.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 439.9
+  },
+  {
+    "frame_idx": 14520,
+    "time_sec": 242.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14580,
+    "time_sec": 243.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14640,
+    "time_sec": 244.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14700,
+    "time_sec": 245.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 14880,
+    "time_sec": 248.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 842.9
+  },
+  {
+    "frame_idx": 14940,
+    "time_sec": 249.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 15000,
+    "time_sec": 250.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 589.9
+  },
+  {
+    "frame_idx": 15060,
+    "time_sec": 251.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 15120,
+    "time_sec": 252.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 657.1
+  },
+  {
+    "frame_idx": 15180,
+    "time_sec": 253.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 49.0
+  },
+  {
+    "frame_idx": 15300,
+    "time_sec": 255.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 85.7
+  },
+  {
+    "frame_idx": 15360,
+    "time_sec": 256.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 15420,
+    "time_sec": 257.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 671.1
+  },
+  {
+    "frame_idx": 15480,
+    "time_sec": 258.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 73.2
+  },
+  {
+    "frame_idx": 15540,
+    "time_sec": 259.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 274.1
+  },
+  {
+    "frame_idx": 15600,
+    "time_sec": 260.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 604.5
+  },
+  {
+    "frame_idx": 15660,
+    "time_sec": 261.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 15720,
+    "time_sec": 262.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 15780,
+    "time_sec": 263.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 676.6
+  },
+  {
+    "frame_idx": 15840,
+    "time_sec": 264.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 71.8
+  },
+  {
+    "frame_idx": 15900,
+    "time_sec": 265.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 15960,
+    "time_sec": 266.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 473.6
+  },
+  {
+    "frame_idx": 16020,
+    "time_sec": 267.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 356.5
+  },
+  {
+    "frame_idx": 16080,
+    "time_sec": 268.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 763.4
+  },
+  {
+    "frame_idx": 16140,
+    "time_sec": 269.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 403.4
+  },
+  {
+    "frame_idx": 16200,
+    "time_sec": 270.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 303.0
+  },
+  {
+    "frame_idx": 16260,
+    "time_sec": 271.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 98.0
+  },
+  {
+    "frame_idx": 16320,
+    "time_sec": 272.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 55.9
+  },
+  {
+    "frame_idx": 16380,
+    "time_sec": 273.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 16440,
+    "time_sec": 274.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 667.8
+  },
+  {
+    "frame_idx": 16500,
+    "time_sec": 275.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 16560,
+    "time_sec": 276.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 16620,
+    "time_sec": 277.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 16680,
+    "time_sec": 278.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 16800,
+    "time_sec": 280.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 59.4
+  },
+  {
+    "frame_idx": 16860,
+    "time_sec": 281.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 59.4
+  },
+  {
+    "frame_idx": 16920,
+    "time_sec": 282.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 53.9
+  },
+  {
+    "frame_idx": 16980,
+    "time_sec": 283.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 216.7
+  },
+  {
+    "frame_idx": 17040,
+    "time_sec": 284.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 51.2
+  },
+  {
+    "frame_idx": 17100,
+    "time_sec": 285.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 493.5
+  },
+  {
+    "frame_idx": 17160,
+    "time_sec": 286.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 375.8
+  },
+  {
+    "frame_idx": 17220,
+    "time_sec": 287.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 17280,
+    "time_sec": 288.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 436.6
+  },
+  {
+    "frame_idx": 17340,
+    "time_sec": 289.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 17460,
+    "time_sec": 291.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 682.9
+  },
+  {
+    "frame_idx": 17520,
+    "time_sec": 292.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 185.7
+  },
+  {
+    "frame_idx": 17580,
+    "time_sec": 293.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 183.4
+  },
+  {
+    "frame_idx": 17640,
+    "time_sec": 294.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 250.5
+  },
+  {
+    "frame_idx": 17700,
+    "time_sec": 295.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 17760,
+    "time_sec": 296.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 257.3
+  },
+  {
+    "frame_idx": 17820,
+    "time_sec": 297.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 17880,
+    "time_sec": 298.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 455.3
+  },
+  {
+    "frame_idx": 17940,
+    "time_sec": 299.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 275.5
+  },
+  {
+    "frame_idx": 18000,
+    "time_sec": 300.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 251.2
+  },
+  {
+    "frame_idx": 18060,
+    "time_sec": 301.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18120,
+    "time_sec": 302.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18180,
+    "time_sec": 303.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 40.5
+  },
+  {
+    "frame_idx": 18240,
+    "time_sec": 304.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18300,
+    "time_sec": 305.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18360,
+    "time_sec": 306.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18420,
+    "time_sec": 307.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 203.0
+  },
+  {
+    "frame_idx": 18480,
+    "time_sec": 308.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 51.2
+  },
+  {
+    "frame_idx": 18540,
+    "time_sec": 309.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 310.0
+  },
+  {
+    "frame_idx": 18600,
+    "time_sec": 310.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 469.3
+  },
+  {
+    "frame_idx": 18660,
+    "time_sec": 311.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18720,
+    "time_sec": 312.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18780,
+    "time_sec": 313.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 18900,
+    "time_sec": 315.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 433.8
+  },
+  {
+    "frame_idx": 18960,
+    "time_sec": 316.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 19140,
+    "time_sec": 319.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 19320,
+    "time_sec": 322.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 446.4
+  },
+  {
+    "frame_idx": 19380,
+    "time_sec": 323.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 19440,
+    "time_sec": 324.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 19500,
+    "time_sec": 325.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 19620,
+    "time_sec": 327.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 236.0
+  },
+  {
+    "frame_idx": 19680,
+    "time_sec": 328.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 63.0
+  },
+  {
+    "frame_idx": 19740,
+    "time_sec": 329.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 19800,
+    "time_sec": 330.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 19860,
+    "time_sec": 331.0,
+    "angle_deg": 270.0,
+    "enemy_dist": 207.0
+  },
+  {
+    "frame_idx": 19920,
+    "time_sec": 332.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 107.9
+  },
+  {
+    "frame_idx": 20040,
+    "time_sec": 334.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 78.8
+  },
+  {
+    "frame_idx": 20100,
+    "time_sec": 335.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 417.6
+  },
+  {
+    "frame_idx": 20160,
+    "time_sec": 336.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 20220,
+    "time_sec": 337.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 168.2
+  },
+  {
+    "frame_idx": 20280,
+    "time_sec": 338.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 662.1
+  },
+  {
+    "frame_idx": 20400,
+    "time_sec": 340.0,
+    "angle_deg": 270.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 20460,
+    "time_sec": 341.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 338.6
+  },
+  {
+    "frame_idx": 20520,
+    "time_sec": 342.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 20580,
+    "time_sec": 343.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 20640,
+    "time_sec": 344.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 310.0
+  },
+  {
+    "frame_idx": 20760,
+    "time_sec": 346.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 20820,
+    "time_sec": 347.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 20880,
+    "time_sec": 348.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 878.5
+  },
+  {
+    "frame_idx": 21000,
+    "time_sec": 350.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 21060,
+    "time_sec": 351.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 21360,
+    "time_sec": 356.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 415.0
+  },
+  {
+    "frame_idx": 21420,
+    "time_sec": 357.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 123.8
+  },
+  {
+    "frame_idx": 21480,
+    "time_sec": 358.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 199.4
+  },
+  {
+    "frame_idx": 21540,
+    "time_sec": 359.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 590.9
+  },
+  {
+    "frame_idx": 21600,
+    "time_sec": 360.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 729.0
+  },
+  {
+    "frame_idx": 21660,
+    "time_sec": 361.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 729.0
+  },
+  {
+    "frame_idx": 21720,
+    "time_sec": 362.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 51.2
+  },
+  {
+    "frame_idx": 21780,
+    "time_sec": 363.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 21840,
+    "time_sec": 364.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 51.2
+  },
+  {
+    "frame_idx": 21900,
+    "time_sec": 365.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 662.9
+  },
+  {
+    "frame_idx": 21960,
+    "time_sec": 366.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 67.5
+  },
+  {
+    "frame_idx": 22020,
+    "time_sec": 367.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 22080,
+    "time_sec": 368.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 158.3
+  },
+  {
+    "frame_idx": 22140,
+    "time_sec": 369.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 72.4
+  },
+  {
+    "frame_idx": 22200,
+    "time_sec": 370.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 49.2
+  },
+  {
+    "frame_idx": 22260,
+    "time_sec": 371.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 79.1
+  },
+  {
+    "frame_idx": 22320,
+    "time_sec": 372.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 79.1
+  },
+  {
+    "frame_idx": 22380,
+    "time_sec": 373.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 22440,
+    "time_sec": 374.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 239.4
+  },
+  {
+    "frame_idx": 22500,
+    "time_sec": 375.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 81.0
+  },
+  {
+    "frame_idx": 22560,
+    "time_sec": 376.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 9999.0
+  },
+  {
+    "frame_idx": 22620,
+    "time_sec": 377.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 411.1
+  },
+  {
+    "frame_idx": 22680,
+    "time_sec": 378.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 22740,
+    "time_sec": 379.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 22800,
+    "time_sec": 380.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 22860,
+    "time_sec": 381.0,
+    "angle_deg": 135.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 22920,
+    "time_sec": 382.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 22980,
+    "time_sec": 383.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 23040,
+    "time_sec": 384.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 23100,
+    "time_sec": 385.0,
+    "angle_deg": 90.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 23160,
+    "time_sec": 386.0,
+    "angle_deg": 45.0,
+    "enemy_dist": 65.9
+  },
+  {
+    "frame_idx": 23220,
+    "time_sec": 387.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 65.9
+  },
+  {
+    "frame_idx": 23580,
+    "time_sec": 393.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 23640,
+    "time_sec": 394.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 23760,
+    "time_sec": 396.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 777.6
+  },
+  {
+    "frame_idx": 23820,
+    "time_sec": 397.0,
+    "angle_deg": 180.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 23940,
+    "time_sec": 399.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 397.9
+  },
+  {
+    "frame_idx": 24000,
+    "time_sec": 400.0,
+    "angle_deg": 0.0,
+    "enemy_dist": 397.9
+  }
+]
